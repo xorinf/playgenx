@@ -1,5 +1,10 @@
 name: Release Please
 
+# Opens (or updates) a release PR with conventional-commit-derived
+# version bumps. On merge, release-please tags the release and the
+# actual npm publish happens in .github/workflows/publish.yml via
+# OpenID Connect (Trusted Publisher). No long-lived NPM_TOKEN needed.
+
 on:
   push:
     branches: [main]
@@ -24,39 +29,3 @@ jobs:
         with:
           config-file: .release-please-config.json
           manifest-file: .release-please-manifest.json
-
-  # Publish job. Disabled until NPM_TOKEN is set on the repo.
-  # To enable: add NPM_TOKEN to repo secrets, then remove the `if: false` line below.
-  publish:
-    name: Publish to npm
-    needs: release-please
-    if: false
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: .nvmrc
-          registry-url: https://registry.npmjs.org
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 9
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Verify
-        run: pnpm run verify
-
-      - name: Build core package
-        run: pnpm --filter playgenx run build
-
-      - name: Publish playgenx
-        run: pnpm publish --filter playgenx --no-git-checks --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
