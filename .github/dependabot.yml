@@ -1,25 +1,67 @@
 version: 2
+
 updates:
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
+    # Cap on open dependabot PRs to keep the queue manageable.
+    open-pull-requests-limit: 5
     groups:
+      # Patch + minor for everything that isn't a known interlocked group.
+      # These can land in any order.
       patch-and-minor:
         applies-to: version-updates
         update-types:
           - "minor"
           - "patch"
-    open-pull-requests-limit: 5
+        # Exclude the interlocked groups below so they get their own PRs.
+        exclude-patterns:
+          - "vite"
+          - "@vitejs/plugin-react"
+
+      # Vite and its plugin must upgrade together — @vitejs/plugin-react N+1
+      # requires Vite N+1's internals. Keeping them in one PR prevents the
+      # "Vite 8 lands first, plugin-react 6 fails to load" pattern we hit on
+      # 2026-07-09.
+      vite-stack:
+        applies-to: version-updates
+        patterns:
+          - "vite"
+          - "@vitejs/plugin-react"
+
+      # React ecosystem — runtime + types usually bump together. Grouping
+      # avoids the "react bumped but react-dom didn't" drift.
+      react-stack:
+        applies-to: version-updates
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+
+      # Major bumps for the rest of the dependency tree. Bundled into one
+      # PR so the upgrade is reviewable as a single unit.
+      major-versions:
+        applies-to: version-updates
+        update-types:
+          - "major"
+        exclude-patterns:
+          - "vite"
+          - "@vitejs/plugin-react"
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
+    open-pull-requests-limit: 3
     groups:
       actions:
         patterns:
           - "*"
-    open-pull-requests-limit: 3
