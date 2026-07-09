@@ -19,5 +19,9 @@
     "lint": "eslint src",
     "test": "vitest --run --passWithNoTests"
   },
+  "dependencies": {
+    "@playgenx/registry": "workspace:*",
+    "@playgenx/utils": "workspace:*"
+  },
   "private": true
 }

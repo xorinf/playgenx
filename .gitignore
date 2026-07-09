@@ -37,3 +37,6 @@ yarn-error.log*
 # Temporary
 .tmp/
 .cache/
+
+# Hermes agent state — plans, skill state, agent working dirs
+.hermes/

@@ -11,3 +11,5 @@
 export type { Provider } from '@playgenx/types';
 
 export { MockProvider } from './mock.js';
+export { OpenAIProvider, OpenAIError } from './openai.js';
+export type { OpenAIProviderOptions } from './openai.js';

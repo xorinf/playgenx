@@ -38,11 +38,18 @@ export interface Artifact {
   readonly model: string;
 }
 
+/** Pipeline stage that produced an error. */
+export type ArtifactErrorStage = 'prompt' | 'provider' | 'parse' | 'validate';
+
 /** Failure result from any pipeline stage. */
 export interface ArtifactError {
   readonly kind: ArtifactKind;
   readonly providerId?: string;
+  /** Which pipeline stage produced the error. */
+  readonly stage: ArtifactErrorStage;
   readonly message: string;
+  /** Optional line number inside the artifact body, if applicable. */
+  readonly line?: number;
 }
 
 /** Discriminated union returned by `generateX` functions. */

@@ -12,7 +12,9 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsdown",
@@ -20,9 +22,24 @@
     "test": "vitest --run --passWithNoTests"
   },
   "dependencies": {
-    "@playgenx/providers": "workspace:*",
+    "@playgenx/parser": "workspace:*",
     "@playgenx/prompts": "workspace:*",
-    "@playgenx/types": "workspace:*"
+    "@playgenx/providers": "workspace:*",
+    "@playgenx/registry": "workspace:*",
+    "@playgenx/types": "workspace:*",
+    "@playgenx/validators": "workspace:*"
   },
-  "private": true
+  "publishConfig": {
+    "access": "public"
+  },
+  "tsdown": {
+    "entry": ["src/index.ts"],
+    "format": ["esm"],
+    "dts": true,
+    "sourcemap": true,
+    "clean": true,
+    "deps": {
+      "alwaysBundle": ["@playgenx/parser", "@playgenx/prompts", "@playgenx/providers", "@playgenx/registry", "@playgenx/types", "@playgenx/validators"]
+    }
+  }
 }
