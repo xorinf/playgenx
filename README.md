@@ -4,7 +4,7 @@
 
 ## Status
 
-🚧 Pre-release. API and package layout may change before 0.1.0.
+Pre-release. API and package layout may change before 0.1.0.
 
 ## License
 

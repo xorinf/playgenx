@@ -17,12 +17,14 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsdown",
-    "dev": "tsdown --watch",
-    "lint": "eslint .",
+    "build": "pnpm -r --filter './packages/*' run build",
+    "build:root": "tsdown",
+    "dev": "pnpm -r --parallel --filter './packages/*' run build --watch",
+    "lint": "pnpm -r run lint",
     "format": "prettier --write .",
-    "test": "vitest",
-    "prepublishOnly": "pnpm run build"
+    "test": "pnpm -r run test",
+    "verify": "pnpm run lint && pnpm run build && pnpm run test",
+    "prepublishOnly": "pnpm run verify"
   },
   "keywords": [
     "ai",
@@ -46,6 +48,14 @@
   "homepage": "https://github.com/xorinf/playgenx",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playgenx/core": "workspace:*",
+    "@playgenx/parser": "workspace:*",
+    "@playgenx/prompts": "workspace:*",
+    "@playgenx/providers": "workspace:*",
+    "@playgenx/registry": "workspace:*",
+    "@playgenx/types": "workspace:*",
+    "@playgenx/utils": "workspace:*",
+    "@playgenx/validators": "workspace:*",
     "@types/node": "^26.1.1",
     "eslint": "^10.6.0",
     "eslint-config-prettier": "^10.1.8",

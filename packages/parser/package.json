@@ -1,0 +1,23 @@
+{
+  "name": "@playgenx/parser",
+  "version": "0.1.0",
+  "description": "Parses LLM responses into structured, validated artifacts.",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "lint": "eslint src",
+    "test": "vitest --run --passWithNoTests"
+  },
+  "private": true
+}

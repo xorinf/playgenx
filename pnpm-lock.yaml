@@ -11,6 +11,30 @@ importers:
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.6.0)
+      '@playgenx/core':
+        specifier: workspace:*
+        version: link:packages/core
+      '@playgenx/parser':
+        specifier: workspace:*
+        version: link:packages/parser
+      '@playgenx/prompts':
+        specifier: workspace:*
+        version: link:packages/prompts
+      '@playgenx/providers':
+        specifier: workspace:*
+        version: link:packages/providers
+      '@playgenx/registry':
+        specifier: workspace:*
+        version: link:packages/registry
+      '@playgenx/types':
+        specifier: workspace:*
+        version: link:packages/types
+      '@playgenx/utils':
+        specifier: workspace:*
+        version: link:packages/utils
+      '@playgenx/validators':
+        specifier: workspace:*
+        version: link:packages/validators
       '@types/node':
         specifier: ^26.1.1
         version: 26.1.1
@@ -35,6 +59,40 @@ importers:
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.1.1)(vite@8.1.4(@types/node@26.1.1))
+
+  packages/core:
+    dependencies:
+      '@playgenx/prompts':
+        specifier: workspace:*
+        version: link:../prompts
+      '@playgenx/providers':
+        specifier: workspace:*
+        version: link:../providers
+      '@playgenx/types':
+        specifier: workspace:*
+        version: link:../types
+
+  packages/parser: {}
+
+  packages/prompts:
+    dependencies:
+      '@playgenx/types':
+        specifier: workspace:*
+        version: link:../types
+
+  packages/providers:
+    dependencies:
+      '@playgenx/types':
+        specifier: workspace:*
+        version: link:../types
+
+  packages/registry: {}
+
+  packages/types: {}
+
+  packages/utils: {}
+
+  packages/validators: {}
 
 packages:
 

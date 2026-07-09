@@ -1,0 +1,26 @@
+{
+  "name": "@playgenx/providers",
+  "version": "0.1.0",
+  "description": "LLM provider implementations (OpenAI, Gemini, Anthropic, Ollama). Every provider implements a shared interface.",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "lint": "eslint src",
+    "test": "vitest --run --passWithNoTests"
+  },
+  "dependencies": {
+    "@playgenx/types": "workspace:*"
+  },
+  "private": true
+}

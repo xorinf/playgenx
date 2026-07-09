@@ -1,0 +1,28 @@
+{
+  "name": "@playgenx/core",
+  "version": "0.1.0",
+  "description": "Public PlayGenX SDK entry point. Exposes high-level APIs for generating interactive educational artifacts.",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "lint": "eslint src",
+    "test": "vitest --run --passWithNoTests"
+  },
+  "dependencies": {
+    "@playgenx/providers": "workspace:*",
+    "@playgenx/prompts": "workspace:*",
+    "@playgenx/types": "workspace:*"
+  },
+  "private": true
+}
