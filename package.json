@@ -1,7 +1,7 @@
 {
   "name": "playgenx",
   "version": "0.1.0",
-  "description": "AI-powered React playground generation engine",
+  "description": "Open-source TypeScript SDK for generating interactive educational experiences from lecture context using LLMs.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -12,21 +12,36 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
+    "build": "tsdown",
+    "dev": "tsdown --watch",
     "lint": "eslint .",
+    "format": "prettier --write .",
     "test": "vitest",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "pnpm run build"
   },
   "keywords": [
     "ai",
     "llm",
-    "react",
+    "education",
     "playground",
-    "generator"
+    "quiz",
+    "simulation",
+    "flashcards",
+    "sdk"
   ],
-  "license": "MIT"
+  "author": "xorinf",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xorinf/playgenx.git"
+  },
+  "bugs": {
+    "url": "https://github.com/xorinf/playgenx/issues"
+  },
+  "homepage": "https://github.com/xorinf/playgenx"
 }
