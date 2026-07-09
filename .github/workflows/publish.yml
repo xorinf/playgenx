@@ -1,0 +1,62 @@
+name: Publish
+
+# Publishes playgenx to npm using OpenID Connect (Trusted Publisher).
+# No NPM_TOKEN secret is needed — npm trusts this workflow via OIDC.
+#
+# Trusted Publisher config on npmjs.org:
+#   Publisher: GitHub Actions
+#   Owner/Repo: xorinf/playgenx
+#   Workflow filename: publish.yml
+#   Environment name: (leave blank or use 'npm-publish' below)
+#
+# Trigger: a successful run of release-please.yml creates a tag like
+# v0.1.3. This workflow runs on that tag and publishes.
+#
+# To enable this:
+#   1. Set up the Trusted Publisher on npmjs.org for this workflow.
+#   2. (Optional) Create a GitHub Environment named "npm-publish" with
+#      required reviewers to gate who can publish.
+#   3. Tag a release (release-please does this automatically).
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: read
+  id-token: write  # Required for OIDC.
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    # environment: npm-publish  # Uncomment after creating the env in repo settings.
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify
+        run: pnpm run verify
+
+      - name: Build core package
+        run: pnpm --filter playgenx run build
+
+      - name: Publish playgenx
+        run: pnpm publish --filter playgenx --no-git-checks --access public
