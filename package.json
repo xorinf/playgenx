@@ -34,7 +34,7 @@
     "flashcards",
     "sdk"
   ],
-  "author": "xorinf",
+  "author": "xorinf <118471720+xorinf@users.noreply.github.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -43,5 +43,14 @@
   "bugs": {
     "url": "https://github.com/xorinf/playgenx/issues"
   },
-  "homepage": "https://github.com/xorinf/playgenx"
+  "homepage": "https://github.com/xorinf/playgenx",
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "eslint": "^10.6.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.4",
+    "tsdown": "^0.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
+  }
 }
