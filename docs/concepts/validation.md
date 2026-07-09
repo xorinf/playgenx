@@ -28,7 +28,7 @@ Real AST-based validation lands in 0.2.0 (likely via `acorn` or
 `generatePlayground` accepts a `validate` option:
 
 ```ts
-import { generatePlayground, OpenAIProvider } from '@playgenx/core';
+import { generatePlayground, OpenAIProvider } from 'playgenx';
 
 const result = await generatePlayground(req, {
   provider: new OpenAIProvider(),
@@ -47,7 +47,7 @@ The return value is:
 You can compose with the built-in:
 
 ```ts
-import { validate, createRegistry, generatePlayground, OpenAIProvider } from '@playgenx/core';
+import { validate, createRegistry, generatePlayground, OpenAIProvider } from 'playgenx';
 
 const strict = createRegistry(['Button', 'Slider']);
 

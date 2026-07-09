@@ -2,7 +2,7 @@
 //
 // Uses the real OpenAI provider. Reads OPENAI_API_KEY from the env.
 
-import { generatePlayground, OpenAIProvider } from '@playgenx/core';
+import { generatePlayground, OpenAIProvider } from 'playgenx';
 
 if (!process.env.OPENAI_API_KEY) {
   console.error('Set OPENAI_API_KEY before running this example.');

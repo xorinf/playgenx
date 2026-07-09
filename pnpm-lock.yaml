@@ -11,9 +11,6 @@ importers:
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.6.0)
-      '@playgenx/core':
-        specifier: workspace:*
-        version: link:packages/core
       '@playgenx/parser':
         specifier: workspace:*
         version: link:packages/parser
@@ -44,6 +41,9 @@ importers:
       eslint-config-prettier:
         specifier: ^10.1.8
         version: 10.1.8(eslint@10.6.0)
+      playgenx:
+        specifier: workspace:*
+        version: link:packages/core
       prettier:
         specifier: ^3.9.4
         version: 3.9.4
@@ -62,7 +62,7 @@ importers:
 
   apps/playground:
     dependencies:
-      '@playgenx/core':
+      playgenx:
         specifier: workspace:*
         version: link:../../packages/core
       react:
@@ -88,26 +88,7 @@ importers:
         specifier: ^5.4.10
         version: 5.4.21(@types/node@26.1.1)(lightningcss@1.32.0)
 
-  packages/core:
-    dependencies:
-      '@playgenx/parser':
-        specifier: workspace:*
-        version: link:../parser
-      '@playgenx/prompts':
-        specifier: workspace:*
-        version: link:../prompts
-      '@playgenx/providers':
-        specifier: workspace:*
-        version: link:../providers
-      '@playgenx/registry':
-        specifier: workspace:*
-        version: link:../registry
-      '@playgenx/types':
-        specifier: workspace:*
-        version: link:../types
-      '@playgenx/validators':
-        specifier: workspace:*
-        version: link:../validators
+  packages/core: {}
 
   packages/parser: {}
 

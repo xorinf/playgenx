@@ -1,7 +1,7 @@
 {
-  "name": "@playgenx/core",
-  "version": "0.1.0",
-  "description": "Public PlayGenX SDK entry point. Exposes high-level APIs for generating interactive educational artifacts.",
+  "name": "playgenx",
+  "version": "0.1.2",
+  "description": "Open-source TypeScript SDK for generating interactive educational experiences from lecture context using LLMs.",
   "type": "module",
   "main": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -16,18 +16,30 @@
     "README.md",
     "LICENSE"
   ],
+  "keywords": [
+    "ai",
+    "llm",
+    "education",
+    "playground",
+    "quiz",
+    "simulation",
+    "flashcards",
+    "sdk"
+  ],
+  "author": "xorinf <118471720+xorinf@users.noreply.github.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xorinf/playgenx.git"
+  },
+  "bugs": {
+    "url": "https://github.com/xorinf/playgenx/issues"
+  },
+  "homepage": "https://github.com/xorinf/playgenx",
   "scripts": {
     "build": "tsdown",
     "lint": "eslint src",
     "test": "vitest --run --passWithNoTests"
-  },
-  "dependencies": {
-    "@playgenx/parser": "workspace:*",
-    "@playgenx/prompts": "workspace:*",
-    "@playgenx/providers": "workspace:*",
-    "@playgenx/registry": "workspace:*",
-    "@playgenx/types": "workspace:*",
-    "@playgenx/validators": "workspace:*"
   },
   "publishConfig": {
     "access": "public"

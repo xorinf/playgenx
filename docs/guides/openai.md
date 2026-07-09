@@ -23,7 +23,7 @@ project-local `.env` file. **Do not commit it.**
 The simplest path:
 
 ```ts
-import { generatePlayground, OpenAIProvider } from '@playgenx/core';
+import { generatePlayground, OpenAIProvider } from 'playgenx';
 
 const result = await generatePlayground(
   { concept: 'recursion', context: '…', kind: 'playground' },

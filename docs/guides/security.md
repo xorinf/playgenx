@@ -39,7 +39,7 @@ forms, or read cookies. That's the actual safety boundary.
 For untrusted input, the recommended pattern is:
 
 ```ts
-import { generatePlayground, OpenAIProvider } from '@playgenx/core';
+import { generatePlayground, OpenAIProvider } from 'playgenx';
 
 // 1. Generate on a server you control.
 const result = await generatePlayground(req, {

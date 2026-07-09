@@ -40,7 +40,7 @@ input, label, br, hr, section, article, main, header, footer, nav
 ## Using the default
 
 ```ts
-import { generatePlayground, OpenAIProvider } from '@playgenx/core';
+import { generatePlayground, OpenAIProvider } from 'playgenx';
 
 await generatePlayground(req, { provider: new OpenAIProvider() });
 // Uses DEFAULT_REGISTRY under the hood.
@@ -49,7 +49,7 @@ await generatePlayground(req, { provider: new OpenAIProvider() });
 ## Custom registry
 
 ```ts
-import { createRegistry, generatePlayground, OpenAIProvider } from '@playgenx/core';
+import { createRegistry, generatePlayground, OpenAIProvider } from 'playgenx';
 
 const mine = createRegistry(['Button', 'Slider', 'MyCustomWidget']);
 

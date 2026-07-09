@@ -2,7 +2,7 @@
 
 A minimal Vite + React app for generating and inspecting interactive
 playground artifacts live. Talks to OpenAI directly from the browser via
-the published `@playgenx/core` SDK.
+the published `playgenx` SDK.
 
 ## Quickstart
 
@@ -38,7 +38,7 @@ untrusted even after it passes.
 ## What it does
 
 1. You fill in `concept` + `context` and pick an artifact `kind`.
-2. The app calls `generatePlayground(...)` from `@playgenx/core`.
+2. The app calls `generatePlayground(...)` from `playgenx`.
 3. The result is shown in a `<pre>` and rendered in a sandboxed iframe.
 4. Failures surface the pipeline `stage` (`parse`, `validate`, `provider`)
    so you can debug.
@@ -48,4 +48,4 @@ untrusted even after it passes.
 - Vite 5
 - React 18
 - TypeScript
-- `@playgenx/core` (workspace dep)
+- `playgenx` (workspace dep)

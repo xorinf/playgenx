@@ -40,8 +40,8 @@ examples/      runnable scripts
 
 ```sh
 pnpm test                        # all packages
-pnpm --filter @playgenx/core test  # one package
-pnpm --filter @playgenx/core run test:watch  # one package, watch
+pnpm --filter playgenx test  # one package
+pnpm --filter playgenx run test:watch  # one package, watch
 ```
 
 ## Coding style
@@ -49,7 +49,7 @@ pnpm --filter @playgenx/core run test:watch  # one package, watch
 - TypeScript strict, no `any` unless you've earned it.
 - ESM only — no `require()`.
 - Run `pnpm run format` (Prettier) before committing.
-- New public API goes through `@playgenx/core`'s barrel.
+- New public API goes through `playgenx`'s barrel.
 - Each package keeps its own tests. Aim for 100% coverage on the public
   surface.
 
@@ -78,9 +78,9 @@ the design. Smaller PRs merge faster.
 
 1. Add the kind to the `ArtifactKind` union in `@playgenx/types`.
 2. Add a prompt template in `@playgenx/prompts` (`src/<kind>.ts`).
-3. Add a `generate<Kind>` function in `@playgenx/core` (mirror
+3. Add a `generate<Kind>` function in `playgenx` (mirror
    `generatePlayground`).
-4. Re-export from `@playgenx/core`'s barrel.
+4. Re-export from `playgenx`'s barrel.
 5. Add tests for the prompt + the new function.
 6. Update the README and docs.
 
@@ -91,7 +91,7 @@ Open a GitHub issue with:
 - What you did (steps to reproduce)
 - What you expected
 - What happened
-- SDK version (`pnpm ls @playgenx/core`)
+- SDK version (`pnpm ls playgenx`)
 
 ## Security issues
 

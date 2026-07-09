@@ -5,7 +5,7 @@ most users.
 
 ## 0.1.0 (this release) — MVP
 
-- ✅ Public SDK entry point: `@playgenx/core`.
+- ✅ Public SDK entry point: `playgenx`.
 - ✅ `generatePlayground(request, options)` with the full pipeline
   (prompt → provider → parse → validate).
 - ✅ One real provider: OpenAI. No SDK dep, raw `fetch`.

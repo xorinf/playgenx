@@ -1,7 +1,7 @@
 # API Reference
 
 This is the complete public API of the PlayGenX SDK as of v0.1.0.
-Everything below is exported from `@playgenx/core`. If you find yourself
+Everything below is exported from `playgenx`. If you find yourself
 importing from a different `@playgenx/*` package directly, you can almost
 certainly do it from core instead.
 

@@ -13,7 +13,7 @@ their prompt templates in 0.1.1.
 ## Usage
 
 You probably don't need to call these directly — `generatePlayground` from
-`@playgenx/core` uses them under the hood.
+`playgenx` uses them under the hood.
 
 ```ts
 import { playgroundPrompt } from '@playgenx/prompts';
@@ -32,5 +32,5 @@ const prompt = playgroundPrompt({
 2. Re-export it from `src/index.ts`.
 3. Add a test in `src/<kind>.test.ts`.
 4. Wire it into `generatePlayground` (or a new `generateX` function) in
-   `@playgenx/core`.
+   `playgenx`.
 5. Add the kind to the `ArtifactKind` union in `@playgenx/types`.

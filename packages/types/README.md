@@ -17,7 +17,7 @@ logic — just shared interfaces consumed by every other package.
 
 ## Usage
 
-You probably don't need to import from here directly — `@playgenx/core`
+You probably don't need to import from here directly — `playgenx`
 re-exports everything. But if you're building an integration that lives
 alongside the SDK (e.g. a custom playground UI), you can:
 

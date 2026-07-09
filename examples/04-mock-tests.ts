@@ -4,7 +4,7 @@
 // Run me: pnpm test examples/04-mock-tests.ts
 
 import { describe, expect, it, vi } from 'vitest';
-import { generatePlayground, MockProvider } from '@playgenx/core';
+import { generatePlayground, MockProvider } from 'playgenx';
 
 describe('generatePlayground (mocked)', () => {
   it('returns the prompt-shaped body from MockProvider', async () => {

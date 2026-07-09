@@ -51,7 +51,7 @@
   "homepage": "https://github.com/xorinf/playgenx",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@playgenx/core": "workspace:*",
+    "playgenx": "workspace:*",
     "@playgenx/parser": "workspace:*",
     "@playgenx/prompts": "workspace:*",
     "@playgenx/providers": "workspace:*",
