@@ -9,8 +9,15 @@
  * @packageDocumentation
  */
 
-export { generatePlayground } from './generate.js';
-export type { GeneratePlaygroundOptions } from './generate.js';
+export {
+  generatePlayground,
+  generatePoll,
+  generateQuiz,
+  generateSimulation,
+  generateFlashcards,
+  generateLab,
+} from './generate.js';
+export type { GenerateOptions } from './generate.js';
 
 export type {
   ArtifactRequest,
@@ -27,8 +34,17 @@ export type {
 export { extractArtifact } from '@playgenx/parser';
 export type { ExtractKind, ParseError, ExtractResult } from '@playgenx/parser';
 export { validate } from '@playgenx/validators';
-export type { ValidationError } from '@playgenx/validators';
+export type { ValidationError, ValidateOptions } from '@playgenx/validators';
 export { createRegistry, DEFAULT_REGISTRY, BUILT_IN_TAGS } from '@playgenx/registry';
 export type { Registry, ComponentName } from '@playgenx/registry';
 export { MockProvider, OpenAIProvider, OpenAIError } from '@playgenx/providers';
 export type { OpenAIProviderOptions } from '@playgenx/providers';
+
+export {
+  playgroundPrompt,
+  pollPrompt,
+  quizPrompt,
+  simulationPrompt,
+  flashcardsPrompt,
+  labPrompt,
+} from '@playgenx/prompts';

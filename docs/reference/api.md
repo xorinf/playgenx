@@ -12,25 +12,96 @@ certainly do it from core instead.
 ```ts
 async function generatePlayground(
   request: ArtifactRequest,
-  options: GeneratePlaygroundOptions,
+  options: GenerateOptions,
 ): Promise<ArtifactResult>;
 ```
 
-Runs the full pipeline: prompt → provider → parse → validate.
+Generate an interactive **playground** (TSX/HTML body the caller renders).
 
-| Parameter | Type                  | Notes                                  |
-| --------- | --------------------- | -------------------------------------- |
-| `request` | `ArtifactRequest`     | Required.                              |
-| `options` | `GeneratePlaygroundOptions` | Required.                       |
+### `generatePoll(request, options)`
 
-`GeneratePlaygroundOptions`:
+```ts
+async function generatePoll(
+  request: ArtifactRequest,
+  options: GenerateOptions,
+): Promise<ArtifactResult>;
+```
 
-| Field      | Type                     | Default            | Notes                                |
-| ---------- | ------------------------ | ------------------ | ------------------------------------ |
-| `provider` | `Provider`               | — (required)       | No default — kept explicit.          |
-| `model`    | `string`                 | provider's `defaultModel` | Override the model.            |
-| `registry` | `Registry`               | `DEFAULT_REGISTRY` | Component allowlist.                 |
-| `validate` | `(body: string) => string \| null` | built-in `validate` | Plug in your own validator. |
+Generate a single-question **poll**. Body is a JSON string:
+
+```json
+{ "question": "...", "options": [{ "id": "a", "label": "..." }, ...] }
+```
+
+### `generateQuiz(request, options)`
+
+```ts
+async function generateQuiz(
+  request: ArtifactRequest,
+  options: GenerateOptions,
+): Promise<ArtifactResult>;
+```
+
+Generate a multi-question **quiz**. Body is a JSON string:
+
+```json
+{
+  "questions": [
+    { "id": "q1", "prompt": "...", "options": [...], "answer": "b" }
+  ]
+}
+```
+
+### `generateSimulation(request, options)`
+
+```ts
+async function generateSimulation(
+  request: ArtifactRequest,
+  options: GenerateOptions,
+): Promise<ArtifactResult>;
+```
+
+Generate an interactive **simulation** (TSX/HTML body with state and progression).
+
+### `generateFlashcards(request, options)`
+
+```ts
+async function generateFlashcards(
+  request: ArtifactRequest,
+  options: GenerateOptions,
+): Promise<ArtifactResult>;
+```
+
+Generate a deck of **flashcards**. Body is a JSON string:
+
+```json
+{
+  "cards": [
+    { "id": "c1", "front": "...", "back": "..." }
+  ]
+}
+```
+
+### `generateLab(request, options)`
+
+```ts
+async function generateLab(
+  request: ArtifactRequest,
+  options: GenerateOptions,
+): Promise<ArtifactResult>;
+```
+
+Generate a guided **lab** (TSX/HTML body, multi-step with hints and a self-check).
+
+### `GenerateOptions` (shared)
+
+| Field          | Type                     | Default            | Notes                                |
+| -------------- | ------------------------ | ------------------ | ------------------------------------ |
+| `provider`     | `Provider`               | — (required)       | No default — kept explicit.          |
+| `model`        | `string`                 | provider's `defaultModel` | Override the model.            |
+| `registry`     | `Registry`               | `DEFAULT_REGISTRY` | Component allowlist.                 |
+| `validate`     | `(body: string) => string \| null` | built-in `validate` | Plug in your own validator. |
+| `skipJsxCheck` | `boolean`                | `false`            | Skip JSX-tag balance check (for JSON-bodied kinds, set automatically). |
 
 **Returns** `Promise<ArtifactResult>` — discriminated union:
 

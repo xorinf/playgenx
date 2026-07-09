@@ -106,3 +106,49 @@ conventional commit messages. The v0.1.0 entry below is hand-written.
   `npm view playgenx@latest` returns 0.1.2.
 
 [0.1.2]: https://github.com/xorinf/playgenx/releases/tag/v0.1.2
+
+## [0.2.0] — 2026-07-09
+
+### Added
+
+- **All 6 artifact kinds are now wired end-to-end.** Until 0.1.x, only
+  `playground` worked; the rest were reserved names. This release
+  brings up `poll`, `quiz`, `simulation`, `flashcards`, and `lab` to
+  full parity:
+  - `generatePoll(req, opts)` — single multiple-choice question.
+    Body is JSON: `{ question, options: [{ id, label }, ...] }`.
+  - `generateQuiz(req, opts)` — 3–8 questions with answers.
+    Body is JSON: `{ questions: [{ id, prompt, options, answer }, ...] }`.
+  - `generateSimulation(req, opts)` — interactive TSX/HTML with state
+    and progression.
+  - `generateFlashcards(req, opts)` — 5–20 cards.
+    Body is JSON: `{ cards: [{ id, front, back }, ...] }`.
+  - `generateLab(req, opts)` — multi-step guided exploration with
+    hints and a self-check (TSX/HTML).
+- Five new prompt templates in `@playgenx/prompts`:
+  `pollPrompt`, `quizPrompt`, `simulationPrompt`, `flashcardsPrompt`,
+  `labPrompt`. Each is a pure function with the same `(request) =>
+  string` shape as the existing `playgroundPrompt`.
+
+### Changed
+
+- `generatePlaygroundOptions` was renamed to `GenerateOptions` and is
+  shared by all 6 generateX functions. Same fields plus a new
+  `skipJsxCheck: boolean` that the JSON-bodied kinds (`poll`, `quiz`,
+  `flashcards`) pass automatically — JSON has no JSX tags to balance.
+- `validate(body, registry?, options?)` now accepts a third arg
+  `{ skipJsxCheck }` for callers writing custom validators.
+- The pipeline is now a single `runPipeline()` helper instead of
+  inlined into `generatePlayground`. Behavior is identical for
+  playground; new kinds reuse it.
+
+### Internal
+
+- The validator's "Unknown component" check no longer triggers on
+  JSON-string bodies when `skipJsxCheck: true`. Previously a poll
+  body like `{"question": "x < y"}` could false-positive.
+- The playground UI (apps/playground) now has a kind dropdown and
+  pretty-prints JSON bodies. TSX-bodied kinds still render in the
+  sandboxed iframe.
+
+[0.2.0]: https://github.com/xorinf/playgenx/releases/tag/v0.2.0
