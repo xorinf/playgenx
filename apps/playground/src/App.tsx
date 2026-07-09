@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { OpenAIProvider, generatePlayground, type ArtifactError, type ArtifactResult } from '@playgenx/core';
+import { OpenAIProvider, generatePlayground, type ArtifactError, type ArtifactResult } from 'playgenx';
 
 type Status = 'idle' | 'loading' | 'ok' | 'error';
 

@@ -3,7 +3,7 @@
 // This is the simplest possible PlayGenX call. No API key, no network.
 // `MockProvider` is a deterministic stand-in for a real LLM.
 
-import { generatePlayground, MockProvider } from '@playgenx/core';
+import { generatePlayground, MockProvider } from 'playgenx';
 
 const result = await generatePlayground(
   {

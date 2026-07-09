@@ -7,7 +7,7 @@ plug in your own.
 ## Simplest case
 
 ```ts
-import { generatePlayground, OpenAIProvider } from '@playgenx/core';
+import { generatePlayground, OpenAIProvider } from 'playgenx';
 
 await generatePlayground(req, {
   provider: new OpenAIProvider(),
@@ -25,7 +25,7 @@ Return `null` to pass, or a string with an error message to fail.
 If you want to use the built-in validator *and* your own check:
 
 ```ts
-import { validate, createRegistry, generatePlayground, OpenAIProvider } from '@playgenx/core';
+import { validate, createRegistry, generatePlayground, OpenAIProvider } from 'playgenx';
 
 const strict = createRegistry(['Button', 'Slider']);
 

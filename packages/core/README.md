@@ -1,4 +1,4 @@
-# @playgenx/core
+# playgenx
 
 The public PlayGenX SDK. One entry point. Everything else is re-exported
 from here.
@@ -6,7 +6,7 @@ from here.
 ## Install
 
 ```sh
-pnpm add @playgenx/core
+pnpm add playgenx
 ```
 
 ## What's exported
@@ -31,7 +31,7 @@ pnpm add @playgenx/core
 ## Quickstart
 
 ```ts
-import { generatePlayground, OpenAIProvider } from '@playgenx/core';
+import { generatePlayground, OpenAIProvider } from 'playgenx';
 
 const result = await generatePlayground(
   { concept: 'binary search', context: '…', kind: 'playground' },
@@ -65,7 +65,7 @@ import {
   OpenAIProvider,
   createRegistry,
   validate,
-} from '@playgenx/core';
+} from 'playgenx';
 
 const customRegistry = createRegistry(['Button', 'Slider', 'MyWidget']);
 

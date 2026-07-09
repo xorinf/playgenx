@@ -6,10 +6,10 @@ running a real generation.
 ## 1. Install
 
 ```sh
-pnpm add @playgenx/core
+pnpm add playgenx
 ```
 
-(Or `npm install @playgenx/core` if you must.)
+(Or `npm install playgenx` if you must.)
 
 ## 2. Try the offline provider
 
@@ -17,7 +17,7 @@ The SDK ships with a `MockProvider` that doesn't talk to any LLM. Use it
 to wire your code first, then swap in a real provider later.
 
 ```ts
-import { generatePlayground, MockProvider } from '@playgenx/core';
+import { generatePlayground, MockProvider } from 'playgenx';
 
 const result = await generatePlayground(
   {
@@ -47,7 +47,7 @@ export OPENAI_API_KEY=sk-…
 ```
 
 ```ts
-import { generatePlayground, OpenAIProvider } from '@playgenx/core';
+import { generatePlayground, OpenAIProvider } from 'playgenx';
 
 const result = await generatePlayground(
   { concept: 'recursion', context: '…', kind: 'playground' },

@@ -23,7 +23,7 @@ Then open the URL Vite prints.
 
 This is the *minimum* you'd write to embed the SDK in a React app:
 
-- `package.json` — Vite + React + `@playgenx/core`.
+- `package.json` — Vite + React + `playgenx`.
 - `vite.config.ts` — minimal Vite config.
 - `index.html` — root HTML.
 - `src/main.tsx` — mount React.

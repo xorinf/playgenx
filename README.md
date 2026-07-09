@@ -5,7 +5,7 @@
 > flashcards — using LLMs.
 
 [![CI](https://img.shields.io/github/actions/workflow/status/xorinf/playgenx/ci.yml?branch=main&label=CI)](https://github.com/xorinf/playgenx/actions)
-[![npm](https://img.shields.io/npm/v/@playgenx/core)](https://www.npmjs.com/package/@playgenx/core)
+[![npm](https://img.shields.io/npm/v/playgenx)](https://www.npmjs.com/package/playgenx)
 ![license](https://img.shields.io/github/license/xorinf/playgenx)
 ![typescript](https://img.shields.io/badge/TypeScript-strict-blue)
 ![pnpm](https://img.shields.io/badge/pnpm-9+-orange)
@@ -18,7 +18,7 @@ component allowlist, and hands you back a structured artifact you can
 render or ship.
 
 ```ts
-import { generatePlayground, OpenAIProvider } from '@playgenx/core';
+import { generatePlayground, OpenAIProvider } from 'playgenx';
 
 const result = await generatePlayground(
   {
@@ -46,11 +46,11 @@ what's next and what we deliberately left out.
 ## Quickstart (offline, no API key)
 
 ```sh
-pnpm add @playgenx/core
+pnpm add playgenx
 ```
 
 ```ts
-import { generatePlayground, MockProvider } from '@playgenx/core';
+import { generatePlayground, MockProvider } from 'playgenx';
 
 const result = await generatePlayground(
   { concept: 'binary search', context: 'Lecture on binary search.', kind: 'playground' },
@@ -68,7 +68,7 @@ export OPENAI_API_KEY=sk-…
 ```
 
 ```ts
-import { generatePlayground, OpenAIProvider } from '@playgenx/core';
+import { generatePlayground, OpenAIProvider } from 'playgenx';
 
 const result = await generatePlayground(
   { concept: 'recursion', context: '…', kind: 'playground' },
@@ -111,7 +111,7 @@ validators do no IO and have no env access. See
 
 | Package                                | Role                              | Status |
 | -------------------------------------- | --------------------------------- | ------ |
-| [`@playgenx/core`](./packages/core)        | Public SDK entry. Re-exports everything. | ✅ 0.1.0 |
+| [`playgenx`](./packages/core)        | Public SDK entry. Re-exports everything. | ✅ 0.1.0 |
 | [`@playgenx/providers`](./packages/providers) | Mock + OpenAI provider implementations. | ✅ 0.1.0 |
 | [`@playgenx/prompts`](./packages/prompts)     | Prompt templates.                 | ✅ 0.1.0 |
 | [`@playgenx/parser`](./packages/parser)       | LLM response → kinded body.       | ✅ 0.1.0 |
@@ -121,7 +121,7 @@ validators do no IO and have no env access. See
 | [`@playgenx/types`](./packages/types)         | Shared TS types.                  | ✅ 0.1.0 |
 | [`apps/playground`](./apps/playground)        | Vite + React local-dev UI.        | ✅ 0.1.0 |
 
-> `@playgenx/core` is the only published npm package. All others are
+> `playgenx` is the only published npm package. All others are
 > private workspace deps, re-exported through core. One published surface,
 > one version to track.
 

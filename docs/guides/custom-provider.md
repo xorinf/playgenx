@@ -38,7 +38,7 @@ export class OllamaProvider implements Provider {
 ## Use it
 
 ```ts
-import { generatePlayground } from '@playgenx/core';
+import { generatePlayground } from 'playgenx';
 import { OllamaProvider } from './my-ollama-provider.js';
 
 const result = await generatePlayground(

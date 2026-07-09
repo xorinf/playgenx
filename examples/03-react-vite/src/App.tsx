@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { generatePlayground, type ArtifactError, type ArtifactResult } from '@playgenx/core';
+import { generatePlayground, type ArtifactError, type ArtifactResult } from 'playgenx';
 
 export function App() {
   const [concept, setConcept] = useState('binary search');
@@ -14,7 +14,7 @@ export function App() {
     // from a server you control. We keep this example short and pass the
     // env-var key directly.
     const apiKey = import.meta.env.VITE_OPENAI_API_KEY ?? '';
-    const { OpenAIProvider } = await import('@playgenx/core');
+    const { OpenAIProvider } = await import('playgenx');
     const r = await generatePlayground(
       { context, concept, kind: 'playground' },
       { provider: new OpenAIProvider({ apiKey }) },

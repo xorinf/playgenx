@@ -12,7 +12,7 @@ conventional commit messages. The v0.1.0 entry below is hand-written.
 
 ### Added
 
-- `@playgenx/core` — public SDK entry point.
+- `playgenx` — public SDK entry point.
 - `generatePlayground(request, options)` — runs the full pipeline:
   prompt → provider → parse → validate.
 - `@playgenx/providers` — `MockProvider` and `OpenAIProvider` (uses raw
@@ -52,7 +52,57 @@ conventional commit messages. The v0.1.0 entry below is hand-written.
   boundary.
 - Only `playground` is wired end-to-end. `poll`, `quiz`, `simulation`,
   `flashcards`, and `lab` are reserved names that ship in 0.1.1.
-- Only `@playgenx/core` is published to npm. The other packages are
+- Only `playgenx` is published to npm. The other packages are
   private workspace deps, re-exported through core.
 
 [0.1.0]: https://github.com/xorinf/playgenx/releases/tag/v0.1.0
+
+## [0.1.1] — 2026-07-09
+
+### Fixed
+
+- **0.1.0 was broken on npm.** The published tarball had the wrong
+  `package.json` (the root meta-package, with `main: ./dist/index.js`)
+  instead of the actual SDK package (which has `main: ./dist/index.mjs`).
+  Imports from `playgenx` would resolve to a path that didn't exist.
+- The published package is now correctly `@playgenx/core`'s
+  re-packaged contents. Install with `npm install playgenx` — it works.
+
+### Changed
+
+- The **published** package is now `playgenx` (unscoped). The
+  **workspace-internal** name is still `@playgenx/core` for the
+  monorepo, but the package that lands on npm is `playgenx@0.1.1+`.
+  This works without an npm organization (which is a paid feature on
+  npmjs.org).
+- 0.1.0 is deprecated on npm. Anyone who installed it gets a warning.
+
+### Notes
+
+- The internal scope `@playgenx/parser`, `@playgenx/registry`,
+  `@playgenx/utils`, `@playgenx/validators`, `@playgenx/providers`,
+  `@playgenx/prompts`, `@playgenx/types` continues to be used inside
+  the monorepo and in the source code. External users only see
+  `playgenx`.
+
+[0.1.1]: https://github.com/xorinf/playgenx/releases/tag/v0.1.1
+
+## [0.1.2] — 2026-07-09
+
+### Fixed
+
+- **0.1.1's `npm install playgenx` failed with 404 on `@playgenx/parser@0.1.0`**.
+  The published `package.json` had `dependencies: { "@playgenx/parser": "0.1.0", ... }`
+  pointing at packages that don't exist on npm. The deps were bundled
+  into `dist/index.mjs` via `tsdown`'s `deps.alwaysBundle`, so the
+  `dependencies` field was unnecessary — and broken.
+- 0.1.2 removes the `dependencies` field from the published
+  `package.json`. `npm install playgenx` now works in a clean
+  environment.
+
+### Notes
+
+- 0.1.0 and 0.1.1 are both deprecated on npm with a clear message.
+  `npm view playgenx@latest` returns 0.1.2.
+
+[0.1.2]: https://github.com/xorinf/playgenx/releases/tag/v0.1.2

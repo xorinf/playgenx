@@ -43,11 +43,11 @@ doesn't override. Pick a sensible default — usually the provider's
 fastest cheap model (`gpt-4o-mini`, `claude-3-5-haiku`, `llama-3.1-8b`,
 etc.) — and let callers opt up to something more expensive.
 
-## Don't import concrete providers from `@playgenx/core`
+## Don't import concrete providers from `playgenx`
 
 If you find yourself wanting to do `import { OpenAIProvider } from
-'@playgenx/core/providers/openai'`, stop — just import from
-`@playgenx/core`. Re-exports are the whole point.
+'playgenx/providers/openai'`, stop — just import from
+`playgenx`. Re-exports are the whole point.
 
 If you want to swap providers at runtime (e.g. based on a feature flag),
 the pattern is:

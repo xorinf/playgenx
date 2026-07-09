@@ -29,7 +29,7 @@ See [`docs/guides/security.md`](./guides/security.md).
 ## Why one published package and not 8?
 
 Less surface to track, less version drift, smaller install footprint.
-You install `@playgenx/core` and get everything. The other packages are
+You install `playgenx` and get everything. The other packages are
 private workspace deps that get re-exported through core.
 
 ## How do I add a custom provider?
@@ -59,7 +59,7 @@ documented as such. For production, call the SDK from a server.
 
 ## How big is the install?
 
-`@playgenx/core` has zero runtime dependencies. The `OpenAIProvider`
+`playgenx` has zero runtime dependencies. The `OpenAIProvider`
 uses raw `fetch` (Node 18+, Bun, Deno, modern browsers). The
 playground app is Vite + React — your usual bundle size.
 

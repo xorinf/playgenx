@@ -12,12 +12,12 @@ pnpm add @playgenx/providers
 ```
 
 > This package is internal to the PlayGenX monorepo for now. The public
-> surface of the SDK is `@playgenx/core`, which re-exports these classes.
+> surface of the SDK is `playgenx`, which re-exports these classes.
 
 ## Quickstart (offline, no API key)
 
 ```ts
-import { generatePlayground } from '@playgenx/core';
+import { generatePlayground } from 'playgenx';
 import { MockProvider } from '@playgenx/providers';
 
 const result = await generatePlayground(
@@ -30,7 +30,7 @@ console.log(result);
 ## OpenAI
 
 ```ts
-import { generatePlayground } from '@playgenx/core';
+import { generatePlayground } from 'playgenx';
 import { OpenAIProvider } from '@playgenx/providers';
 
 const provider = new OpenAIProvider(); // reads OPENAI_API_KEY from env
