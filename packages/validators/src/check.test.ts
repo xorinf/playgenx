@@ -75,4 +75,31 @@ describe('validate', () => {
     const body = '/* require("nope") */\n<Card />';
     expect(validate(body)).toBeNull();
   });
+
+  it('skipJsxCheck=true: JSON-bodied artifacts with no tags pass', () => {
+    const json = JSON.stringify({
+      question: 'What is 2 + 2?',
+      options: [
+        { id: 'a', label: '3' },
+        { id: 'b', label: '4' },
+      ],
+    });
+    // Without skipJsxCheck this would fail because of the `<` in JSON-ish
+    // content; with skipJsxCheck=true it's allowed.
+    expect(validate(json, undefined, { skipJsxCheck: true })).toBeNull();
+  });
+
+  it('skipJsxCheck=true: still catches eval/import/forbidden constructs', () => {
+    const body = '{"x": eval("1")}';
+    const err = validate(body, undefined, { skipJsxCheck: true });
+    expect(err).not.toBeNull();
+    expect(err?.message).toMatch(/eval/);
+  });
+
+  it('skipJsxCheck=true: still catches unknown components', () => {
+    const body = '{"x": "<MyEvil />"}';
+    const err = validate(body, undefined, { skipJsxCheck: true });
+    expect(err).not.toBeNull();
+    expect(err?.message).toMatch(/Unknown component/);
+  });
 });

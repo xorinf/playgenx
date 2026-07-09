@@ -1,6 +1,6 @@
 import { BUILT_IN_TAGS, DEFAULT_REGISTRY, type Registry } from '@playgenx/registry';
 import { hasBalancedTags, lineOfFirst, stripCodeComments, tagNames } from '@playgenx/utils';
-import type { ValidationError } from './types.js';
+import type { ValidateOptions, ValidationError } from './types.js';
 
 const BUILT_IN_SET = new Set(BUILT_IN_TAGS.map((t: string) => t.toLowerCase()));
 
@@ -10,8 +10,8 @@ const BUILT_IN_SET = new Set(BUILT_IN_TAGS.map((t: string) => t.toLowerCase()));
  * v0.1.0 checks (in order — first failure is returned):
  *
  * 1. No `eval(` and no `new Function(` substrings (after comment-stripping).
- * 2. No `import ` or `require(` (after comment-stripping).
- * 3. JSX-style tags are roughly balanced.
+ * 2. No `import` or `require(` (after comment-stripping).
+ * 3. (Optional) JSX tags roughly balanced. Skipped for JSON-bodied kinds.
  * 4. Every capitalized component tag is in `registry` (default:
  *    {@link DEFAULT_REGISTRY}) or in the lowercase built-in set
  *    ({@link BUILT_IN_TAGS}).
@@ -25,9 +25,14 @@ const BUILT_IN_SET = new Set(BUILT_IN_TAGS.map((t: string) => t.toLowerCase()));
  *
  * @param body - The artifact body, post-parser.
  * @param registry - Optional component allowlist. Defaults to {@link DEFAULT_REGISTRY}.
+ * @param options - Validation options.
  * @returns A {@link ValidationError} on failure, or `null` on success.
  */
-export function validate(body: string, registry: Registry = DEFAULT_REGISTRY): ValidationError | null {
+export function validate(
+  body: string,
+  registry: Registry = DEFAULT_REGISTRY,
+  options: ValidateOptions = {},
+): ValidationError | null {
   const stripped = stripCodeComments(body);
 
   // 1. No eval / new Function.
@@ -57,8 +62,8 @@ export function validate(body: string, registry: Registry = DEFAULT_REGISTRY): V
     };
   }
 
-  // 3. Roughly balanced tags.
-  if (!hasBalancedTags(body)) {
+  // 3. Roughly balanced tags. Skipped for JSON-bodied kinds.
+  if (!options.skipJsxCheck && !hasBalancedTags(body)) {
     return { message: 'Unbalanced JSX tags', line: 1 };
   }
 

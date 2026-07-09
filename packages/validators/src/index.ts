@@ -10,4 +10,4 @@
  */
 
 export { validate } from './check.js';
-export type { ValidationError } from './types.js';
+export type { ValidationError, ValidateOptions } from './types.js';

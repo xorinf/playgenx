@@ -82,14 +82,17 @@ pass it explicitly: `new OpenAIProvider({ apiKey: 'sk-…' })`. See
 
 ## Supported artifact kinds
 
-| Kind          | v0.1.0 | Notes                                                      |
-| ------------- | :----: | ---------------------------------------------------------- |
-| `playground`  |   ✅   | Interactive TSX/HTML body. The default.                    |
-| `poll`        |   🚧   | API live, prompts land in 0.1.1.                           |
-| `quiz`        |   🚧   | Same as above.                                             |
-| `simulation`  |   🚧   | Same as above.                                             |
-| `flashcards`  |   🚧   | Same as above.                                             |
-| `lab`         |   🚧   | Same as above.                                             |
+| Kind          | Status | Body shape                                              |
+| ------------- | :----: | ------------------------------------------------------- |
+| `playground`  |   ✅   | TSX/HTML — a self-contained interactive component.       |
+| `poll`        |   ✅   | JSON — a single multiple-choice question with 2–4 options. |
+| `quiz`        |   ✅   | JSON — 3–8 questions, each with options and an answer.  |
+| `simulation`  |   ✅   | TSX/HTML — interactive component with state and progression. |
+| `flashcards`  |   ✅   | JSON — 5–20 cards, each with a front and back.          |
+| `lab`         |   ✅   | TSX/HTML — multi-step guided exploration with hints.    |
+
+All kinds ship in 0.2.0. Generate with `generatePlayground`, `generatePoll`,
+`generateQuiz`, `generateSimulation`, `generateFlashcards`, or `generateLab`.
 
 ## Architecture
 
