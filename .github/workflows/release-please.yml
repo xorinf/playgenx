@@ -4,13 +4,16 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   release-please:
     name: Release PR
     runs-on: ubuntu-latest
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
-      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -22,10 +25,12 @@ jobs:
           config-file: .release-please-config.json
           manifest-file: .release-please-manifest.json
 
+  # Publish job. Disabled until NPM_TOKEN is set on the repo.
+  # To enable: add NPM_TOKEN to repo secrets, then remove the `if: false` line below.
   publish:
     name: Publish to npm
     needs: release-please
-    if: ${{ needs.release-please.outputs.release_created }}
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -49,9 +54,9 @@ jobs:
         run: pnpm run verify
 
       - name: Build core package
-        run: pnpm --filter @playgenx/core run build
+        run: pnpm --filter playgenx run build
 
-      - name: Publish @playgenx/core
-        run: pnpm publish --filter @playgenx/core --no-git-checks --access public
+      - name: Publish playgenx
+        run: pnpm publish --filter playgenx --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
