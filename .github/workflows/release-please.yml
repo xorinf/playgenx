@@ -4,14 +4,24 @@ name: Release Please
 # version bumps. On merge, release-please tags the release and the
 # actual npm publish happens in .github/workflows/publish.yml via
 # OpenID Connect (Trusted Publisher). No long-lived NPM_TOKEN needed.
+#
+# release-please creates branches and PRs using RELEASE_PLEASE_TOKEN
+# (a PAT) because the default GITHUB_TOKEN cannot open PRs — that's
+# a GitHub-wide security restriction, not a config bug.
+#
+# To set up the PAT (one-time):
+#   1. https://github.com/settings/tokens → Generate new token (classic)
+#   2. Scopes: 'repo' (full control of private repositories)
+#   3. Repo access: public repos (xorinf/playgenx)
+#   4. Copy the token, then: gh secret set RELEASE_PLEASE_TOKEN
+#   5. Optional: set an expiry reminder; rotate before it expires.
 
 on:
   push:
     branches: [main]
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   release-please:
@@ -29,3 +39,6 @@ jobs:
         with:
           config-file: .release-please-config.json
           manifest-file: .release-please-manifest.json
+          # Use the PAT for git operations (branch + PR creation).
+          # The default GITHUB_TOKEN can't open PRs by GitHub's policy.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
