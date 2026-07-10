@@ -41,7 +41,13 @@ describe('generatePoll', () => {
     // Body has no JSX tags — without skipJsxCheck the `[]` and `{}` braces
     // would skew the tag balance count and could fail. With skipJsxCheck
     // passed through runPipeline, it should pass.
-    const json = JSON.stringify({ question: 'q', options: [{ id: 'a', label: 'l' }] });
+    const json = JSON.stringify({
+      question: 'q',
+      options: [
+        { id: 'a', label: 'A' },
+        { id: 'b', label: 'B' },
+      ],
+    });
     const r = await generatePoll(
       { context: 'ctx', concept: 'c', kind: 'poll' },
       { provider: rawProvider('```json\n' + json + '\n```') },
@@ -57,6 +63,24 @@ describe('generateQuiz', () => {
         {
           id: 'q1',
           prompt: 'Pick A',
+          options: [
+            { id: 'a', label: 'A' },
+            { id: 'b', label: 'B' },
+          ],
+          answer: 'a',
+        },
+        {
+          id: 'q2',
+          prompt: 'Pick B',
+          options: [
+            { id: 'a', label: 'A' },
+            { id: 'b', label: 'B' },
+          ],
+          answer: 'b',
+        },
+        {
+          id: 'q3',
+          prompt: 'Pick C',
           options: [
             { id: 'a', label: 'A' },
             { id: 'b', label: 'B' },
@@ -103,12 +127,12 @@ describe('generateSimulation', () => {
 
 describe('generateFlashcards', () => {
   it('returns ok with kind="flashcards" for a valid JSON body', async () => {
-    const json = JSON.stringify({
-      cards: [
-        { id: 'c1', front: 'Front 1', back: 'Back 1' },
-        { id: 'c2', front: 'Front 2', back: 'Back 2' },
-      ],
-    });
+    const cards = Array.from({ length: 5 }, (_, i) => ({
+      id: `c${i + 1}`,
+      front: `Front ${i + 1}`,
+      back: `Back ${i + 1}`,
+    }));
+    const json = JSON.stringify({ cards });
     const r = await generateFlashcards(
       { context: 'ctx', concept: 'c', kind: 'flashcards' },
       { provider: rawProvider('```json\n' + json + '\n```') },

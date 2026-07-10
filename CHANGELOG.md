@@ -152,3 +152,52 @@ conventional commit messages. The v0.1.0 entry below is hand-written.
   sandboxed iframe.
 
 [0.2.0]: https://github.com/xorinf/playgenx/releases/tag/v0.2.0
+
+## [0.2.1] — 2026-07-09
+
+### Fixed (robustness pass — no API changes)
+
+- **Parser** (`@playgenx/parser`): mid-line ``` or ~~~ (e.g. "here's the
+  code: \`\`\`tsx") no longer produce a misleading "unbalanced fence"
+  error — they fall through to shape detection. Tilde fences (~~~) are
+  now supported. CRLF line endings are stripped from the body.
+- **balanced-tags** (`@playgenx/utils`): self-closing tag detection
+  now handles attribute values containing `<` and `>` (e.g.
+  `<Foo bar="<x>" />`) via a small state machine. HTML void elements
+  (`<br>`, `<hr>`, `<img>`, `<input>`, etc.) are treated as self-closing.
+  String literals are stripped before counting, so `"<div>"` inside
+  a string doesn't affect balance. 20 new tests.
+- **tag-names** (`@playgenx/utils`): now strips comments and string
+  literals before scanning, so `<Button>` inside a string no longer
+  false-positives. 12 tests.
+- **strip-comments** (`@playgenx/utils`): strips string-literal
+  contents FIRST so `//` inside `"..."` is not eaten as a comment.
+- **Validator** (`@playgenx/validators`): new `validateForKind(kind, ...)`
+  function. For JSON-bodied kinds (poll, quiz, flashcards), it verifies
+  the body parses as JSON AND roughly matches the expected shape
+  (poll: 2-4 options; quiz: 3-8 questions, `answer` must match an
+  option id; flashcards: 5-20 cards). `validate()` still works as
+  before; the new function is wired into the core pipeline. 18 new
+  tests.
+- **OpenAI provider** (`@playgenx/providers`): 60s default timeout
+  via `AbortController`. Retries on 408/409/425/429/5xx with
+  exponential backoff + jitter (default 2 retries). `systemPrompt`
+  option for sending a system message. Truncation marker appended to
+  body when `finish_reason === 'length'`. 12 new tests.
+- **Core pipeline** (`@playgenx/core`): `maxResponseBytes` option
+  caps runaway responses with fence-aware truncation (preserves
+  ```` ```...``` ```` structure; the truncation marker is placed INSIDE
+  the fence so the parser keeps it). 3 new body parsers
+  (`parsePollBody`, `parseQuizBody`, `parseFlashcardsBody`) return
+  typed `ParseResult<T>` for the JSON-bodied kinds.
+
+### Notes
+
+- No public API changes. `validate()` still has the same signature;
+  `validateForKind()` is a new export. The pipeline uses
+  `validateForKind` automatically so the new JSON shape checks apply
+  to all 6 generateX functions without any caller changes.
+- The validator's checks are still lightweight (substring + tag balance
+  + tag names). A real AST-based validator remains on the 0.3.0 roadmap.
+
+[0.2.1]: https://github.com/xorinf/playgenx/releases/tag/v0.2.1
