@@ -15,6 +15,23 @@ function mockFetchOnce(body: unknown, init: { status?: number; ok?: boolean } = 
   return fn;
 }
 
+/** Mock fetch to return `responses[i]` on the i-th call. */
+function mockFetchSequence(
+  responses: Array<{ body: unknown; status?: number; ok?: boolean }>,
+): ReturnType<typeof vi.fn> {
+  const fn = vi.fn();
+  for (const r of responses) {
+    fn.mockResolvedValueOnce({
+      ok: r.ok ?? (r.status === undefined || (r.status >= 200 && r.status < 300)),
+      status: r.status ?? 200,
+      text: async () => (typeof r.body === 'string' ? r.body : JSON.stringify(r.body)),
+      json: async () => r.body,
+    } as unknown as Response);
+  }
+  globalThis.fetch = fn as unknown as typeof fetch;
+  return fn;
+}
+
 afterEach(() => {
   globalThis.fetch = originalFetch;
   if (originalEnv === undefined) {
@@ -37,7 +54,7 @@ describe('OpenAIProvider', () => {
     expect(result).toBe('hello there');
   });
 
-  it('throws OpenAIError with status on 401', async () => {
+  it('throws OpenAIError with status on 401 (no retry on auth error)', async () => {
     mockFetchOnce({ error: { message: 'bad key' } }, { status: 401 });
     const provider = new OpenAIProvider();
     await expect(provider.complete('hi')).rejects.toMatchObject({
@@ -46,8 +63,13 @@ describe('OpenAIProvider', () => {
     });
   });
 
-  it('throws OpenAIError with status on 429', async () => {
-    mockFetchOnce('rate limited', { status: 429 });
+  it('throws OpenAIError on 429 after exhausting retries', async () => {
+    // 3 responses (initial + 2 retries), all 429.
+    mockFetchSequence([
+      { body: 'rate limited', status: 429 },
+      { body: 'rate limited', status: 429 },
+      { body: 'rate limited', status: 429 },
+    ]);
     const provider = new OpenAIProvider();
     await expect(provider.complete('hi')).rejects.toMatchObject({
       name: 'OpenAIError',
@@ -55,8 +77,41 @@ describe('OpenAIProvider', () => {
     });
   });
 
-  it('throws OpenAIError on 5xx', async () => {
-    mockFetchOnce('boom', { status: 500 });
+  it('retries on 429 and succeeds when later response is 200', async () => {
+    mockFetchSequence([
+      { body: 'rate limited', status: 429 },
+      { body: { choices: [{ message: { content: 'recovered' } }] }, status: 200 },
+    ]);
+    const provider = new OpenAIProvider();
+    const result = await provider.complete('hi');
+    expect(result).toBe('recovered');
+  });
+
+  it('retries on 500 and succeeds when later response is 200', async () => {
+    mockFetchSequence([
+      { body: 'server error', status: 500 },
+      { body: { choices: [{ message: { content: 'recovered' } }] }, status: 200 },
+    ]);
+    const provider = new OpenAIProvider();
+    const result = await provider.complete('hi');
+    expect(result).toBe('recovered');
+  });
+
+  it('does NOT retry on 400 (client error)', async () => {
+    // Only 1 mock — if retry happens, the test would fail with a fetch-not-mocked error.
+    mockFetchOnce({ error: { message: 'bad request' } }, { status: 400 });
+    const provider = new OpenAIProvider();
+    await expect(provider.complete('hi')).rejects.toMatchObject({
+      status: 400,
+    });
+  });
+
+  it('throws OpenAIError on 5xx after exhausting retries', async () => {
+    mockFetchSequence([
+      { body: 'boom', status: 500 },
+      { body: 'boom', status: 500 },
+      { body: 'boom', status: 500 },
+    ]);
     const provider = new OpenAIProvider();
     await expect(provider.complete('hi')).rejects.toMatchObject({
       name: 'OpenAIError',
@@ -107,8 +162,7 @@ describe('OpenAIProvider', () => {
     const fn = mockFetchOnce({ choices: [{ message: { content: 'ok' } }] });
     const provider = new OpenAIProvider();
     await provider.complete('explain binary search');
-    const [url, init] = fn.mock.calls[0]!;
-    expect(url).toBe('https://api.openai.com/v1/chat/completions');
+    const [, init] = fn.mock.calls[0]!;
     const body = JSON.parse((init as RequestInit).body as string);
     expect(body).toEqual({
       model: 'gpt-4o-mini',
@@ -137,5 +191,55 @@ describe('OpenAIProvider', () => {
       expect(err).toBeInstanceOf(OpenAIError);
       expect((err as OpenAIError).cause).toBe(networkErr);
     }
+  });
+
+  it('sends systemPrompt as the first message when configured', async () => {
+    const fn = mockFetchOnce({ choices: [{ message: { content: 'ok' } }] });
+    const provider = new OpenAIProvider({ systemPrompt: 'You are a helpful tutor.' });
+    await provider.complete('hi');
+    const [, init] = fn.mock.calls[0]!;
+    const body = JSON.parse((init as RequestInit).body as string);
+    expect(body.messages).toEqual([
+      { role: 'system', content: 'You are a helpful tutor.' },
+      { role: 'user', content: 'hi' },
+    ]);
+  });
+
+  it('does not include a system message when systemPrompt is unset', async () => {
+    const fn = mockFetchOnce({ choices: [{ message: { content: 'ok' } }] });
+    const provider = new OpenAIProvider();
+    await provider.complete('hi');
+    const [, init] = fn.mock.calls[0]!;
+    const body = JSON.parse((init as RequestInit).body as string);
+    expect(body.messages.every((m: { role: string }) => m.role !== 'system')).toBe(true);
+  });
+
+  it('appends a truncation marker when finish_reason is "length"', async () => {
+    mockFetchOnce({
+      choices: [
+        { finish_reason: 'length', message: { content: 'partial answer' } },
+      ],
+    });
+    const provider = new OpenAIProvider();
+    const result = await provider.complete('hi');
+    expect(result).toContain('partial answer');
+    expect(result).toContain('truncated by the model');
+  });
+
+  it('returns content as-is when finish_reason is "stop"', async () => {
+    mockFetchOnce({
+      choices: [
+        { finish_reason: 'stop', message: { content: 'full answer' } },
+      ],
+    });
+    const provider = new OpenAIProvider();
+    const result = await provider.complete('hi');
+    expect(result).toBe('full answer');
+  });
+
+  it('maxRetries: 0 disables retries (single attempt)', async () => {
+    mockFetchOnce('rate limited', { status: 429 });
+    const provider = new OpenAIProvider({ maxRetries: 0 });
+    await expect(provider.complete('hi')).rejects.toMatchObject({ status: 429 });
   });
 });

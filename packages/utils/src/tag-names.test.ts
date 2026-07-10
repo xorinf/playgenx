@@ -22,4 +22,35 @@ describe('tagNames', () => {
     const result = tagNames('<Chart data={x}><Heading /><Button /></Chart>');
     expect(result.sort()).toEqual(['Button', 'Chart', 'Heading']);
   });
+
+  it('ignores tags inside line comments', () => {
+    expect(tagNames('// <Button> here\n<RealWidget />')).toEqual(['RealWidget']);
+  });
+
+  it('ignores tags inside block comments', () => {
+    expect(tagNames('/* <Button> here */ <RealWidget />')).toEqual(['RealWidget']);
+  });
+
+  it('ignores tags inside double-quoted strings', () => {
+    expect(tagNames('const s = "<Button>"; <RealWidget />')).toEqual(['RealWidget']);
+  });
+
+  it('ignores tags inside single-quoted strings', () => {
+    expect(tagNames("const s = '<Button>'; <RealWidget />")).toEqual(['RealWidget']);
+  });
+
+  it('ignores tags inside template literals', () => {
+    expect(tagNames('const s = `<Button>`; <RealWidget />')).toEqual(['RealWidget']);
+  });
+
+  it('handles escaped quotes inside strings (does not exit early)', () => {
+    expect(tagNames('const s = "<Button>\\"<More>"; <RealWidget />')).toEqual([
+      'RealWidget',
+    ]);
+  });
+
+  it('preserves tag names that are adjacent to other text', () => {
+    // No whitespace between tags — common in generated JSX.
+    expect(tagNames('<Foo><Bar /></Foo>')).toEqual(['Foo', 'Bar']);
+  });
 });

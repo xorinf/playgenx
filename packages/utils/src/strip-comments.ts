@@ -1,12 +1,24 @@
+import { stripStrings } from './strip-strings.js';
+
 /**
- * Strip `// line` and `/* block *\/` comments from code, preserving newlines
- * so that line numbers in the result are roughly stable with the input.
+ * Strip `// line` and `/* block *\/` comments AND the contents of
+ * string literals, preserving newlines so that line numbers in the
+ * result are roughly stable with the input.
+ *
+ * String-literal contents are stripped because substring checks for
+ * `eval`, `import`, etc. would otherwise false-positive on the
+ * characters inside strings. We preserve the quote characters themselves
+ * so line numbers stay stable.
  */
 export function stripCodeComments(body: string): string {
+  // Strip strings first so // inside "..." doesn't look like a comment.
+  const noStrings = stripStrings(body);
   // Replace //...\n with the same number of newlines (so the line count holds).
-  const noLineComments = body.replace(/\/\/[^\n]*/g, (m) => m.replace(/[^\n]/g, ' '));
+  const noLineComments = noStrings.replace(/\/\/[^\n]*/g, (m: string) =>
+    m.replace(/[^\n]/g, ' '),
+  );
   // Replace /* ... */ with spaces, preserving newlines.
-  const noBlockComments = noLineComments.replace(/\/\*[\s\S]*?\*\//g, (m) =>
+  const noBlockComments = noLineComments.replace(/\/\*[\s\S]*?\*\//g, (m: string) =>
     m.replace(/[^\n]/g, ' '),
   );
   return noBlockComments;
