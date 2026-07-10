@@ -2,12 +2,53 @@ import { extractArtifact } from '@playgenx/parser';
 import { DEFAULT_REGISTRY, type Registry } from '@playgenx/registry';
 import { validateForKind } from '@playgenx/validators';
 import type {
+  ArtifactErrorCode,
   ArtifactRequest,
   ArtifactResult,
   Provider,
 } from '@playgenx/types';
 
 const DEFAULT_MAX_RESPONSE_BYTES = 200_000; // 200 KB
+
+/**
+ * What counts as a transient provider failure that should trigger an
+ * automatic retry. A failure matching any of these gets retried with
+ * exponential backoff up to `maxRetries` times. Permanent failures
+ * (auth, malformed request, etc.) bubble up immediately.
+ */
+export function isTransientProviderError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  // Network-level failures (Node fetch / undici).
+  const code = (err as Error & { code?: string }).code;
+  if (code) {
+    if (
+      code === 'ECONNRESET' ||
+      code === 'ETIMEDOUT' ||
+      code === 'ECONNREFUSED' ||
+      code === 'EAI_AGAIN' ||
+      code === 'EPIPE' ||
+      code === 'ENOTFOUND' ||
+      code === 'UND_ERR_SOCKET'
+    ) {
+      return true;
+    }
+  }
+  // OpenAI-style structured errors with an HTTP status. 429 and 5xx
+  // are retryable; 4xx (other than 429) are caller errors.
+  const status = (err as Error & { status?: number }).status;
+  if (typeof status === 'number') {
+    if (status === 429) return true;
+    if (status >= 500 && status < 600) return true;
+  }
+  // AbortError from our own timeout — treated as transient (the user
+  // can just retry with a longer timeout).
+  if (err.name === 'AbortError') return true;
+  return false;
+}
+
+const DEFAULT_BACKOFF_BASE_MS = 250;
+const DEFAULT_MAX_RETRIES = 2; // 3 total attempts (1 initial + 2 retries)
+const DEFAULT_TIMEOUT_MS = 60_000; // 60s per attempt
 
 export interface GenerateOptions {
   /** Provider to call. Required — no default to keep behavior explicit. */
@@ -44,14 +85,52 @@ export interface GenerateOptions {
   /**
    * Maximum response body size in bytes. Default 200 KB. Responses
    * larger than this are truncated with a marker. Set to 0 to disable.
+   *
+   * This is a post-hoc safety net — the LLM has already spent tokens
+   * generating the truncated content. To cap token spend at the API
+   * itself, set `maxTokens`.
    */
   readonly maxResponseBytes?: number;
+  /**
+   * Hard cap on output tokens. Passed to the provider's `complete()`
+   * call as `maxTokens`; providers that support it (e.g. OpenAI) send
+   * it as `max_tokens` so the model is stopped server-side before it
+   * spends tokens we discard.
+   *
+   * Default: undefined (no cap; provider default applies). Setting this
+   * is the recommended way to bound generation cost. Does NOT affect
+   * response quality when set above the model's natural response size.
+   */
+  readonly maxTokens?: number;
+  /**
+   * Per-attempt timeout in milliseconds. The provider's `complete()`
+   * call is aborted if it takes longer than this. Default 60s.
+   *
+   * Set to 0 to disable. A timeout is treated as a transient error
+   * and counts toward `maxRetries` — the next attempt gets a fresh
+   * budget.
+   */
+  readonly timeoutMs?: number;
+  /**
+   * Maximum number of retries on transient provider failures. Default 2
+   * (so 3 total attempts). Set to 0 to disable retries entirely. Only
+   * transient failures (network errors, 429, 5xx, timeout) are retried;
+   * permanent failures (4xx other than 429) bubble up immediately.
+   */
+  readonly maxRetries?: number;
+  /**
+   * Base delay in milliseconds for exponential backoff between retries.
+   * Actual delay is `baseMs * 2^attempt` plus up to 25% jitter. Default
+   * 250ms.
+   */
+  readonly retryBaseMs?: number;
 }
 
 /**
  * Shared pipeline used by every `generateX` function. The only thing
  * that varies between kinds is the prompt template — the rest of the
- * pipeline (provider → parse → validate → return) is identical.
+ * pipeline (build prompt → provider call (with retries + timeout) →
+ * truncate → extract → validate → return) is identical.
  */
 async function runPipeline(
   request: ArtifactRequest,
@@ -62,33 +141,62 @@ async function runPipeline(
   // pay the cost of loading every prompt template.
   const prompt = await buildPrompt(request);
 
-  // 1) Provider call.
-  let raw: string;
-  try {
-    raw = await options.provider.complete(prompt, { model: options.model });
-  } catch (err) {
+  // 1) Provider call, with retries on transient failures and a per-
+  //    attempt timeout.
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES;
+  const retryBaseMs = options.retryBaseMs ?? DEFAULT_BACKOFF_BASE_MS;
+
+  let raw: string | undefined;
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      raw = await options.provider.complete(prompt, {
+        model: options.model,
+        maxTokens: options.maxTokens,
+        timeoutMs: timeoutMs > 0 ? timeoutMs : undefined,
+      });
+      lastErr = undefined;
+      break;
+    } catch (err) {
+      lastErr = err;
+      if (!isTransientProviderError(err) || attempt >= maxRetries) break;
+      // Exponential backoff with up to 25% jitter.
+      const base = retryBaseMs * Math.pow(2, attempt);
+      const jitter = base * 0.25 * (Math.random() * 2 - 1);
+      const delayMs = Math.max(50, Math.floor(base + jitter));
+      await sleep(delayMs);
+    }
+  }
+
+  if (raw === undefined) {
     return {
       ok: false,
       error: {
         kind: request.kind,
         providerId: options.provider.id,
         stage: 'provider',
-        message: err instanceof Error ? err.message : String(err),
+        code: lastErr && (lastErr as Error).name === 'AbortError' ? 'TIMEOUT' : 'PROVIDER_ERROR',
+        message: lastErr instanceof Error ? lastErr.message : String(lastErr),
       },
     };
   }
 
-  // Defensive: cap response size. A runaway LLM or hostile response
-  // shouldn't blow up the validator. We truncate at the FIRST fence
-  // boundary inside the budget so the parser still has a chance to find
-  // a balanced pair. If no fence fits, we add a closing fence ourselves.
+  // 2) Defensive: cap response size. A runaway LLM or hostile response
+  //    shouldn't blow up the validator. We truncate at the FIRST fence
+  //    boundary inside the budget so the parser still has a chance to
+  //    find a balanced pair. If no fence fits, we add a closing fence
+  //    ourselves.
   const maxBytes = options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
+  let processed = raw;
+  let truncated = false;
   if (maxBytes > 0 && raw.length > maxBytes) {
-    raw = truncateWithFenceAwareness(raw, maxBytes);
+    processed = truncateWithFenceAwareness(raw, maxBytes);
+    truncated = true;
   }
 
-  // 2) Parse.
-  const parsed = extractArtifact(raw);
+  // 3) Parse.
+  const parsed = extractArtifact(processed);
   if (!parsed.ok) {
     return {
       ok: false,
@@ -96,14 +204,15 @@ async function runPipeline(
         kind: request.kind,
         providerId: options.provider.id,
         stage: 'parse',
+        code: parseErrorCode(parsed.error.message),
         message: parsed.error.message,
         line: parsed.error.line,
       },
     };
   }
 
-  // 3) Validate. Use the kind-specific validator by default so JSON
-  // kinds get shape checks; allow callers to plug in their own.
+  // 4) Validate. Use the kind-specific validator by default so JSON
+  //    kinds get shape checks; allow callers to plug in their own.
   if (options.validate) {
     const validationError = options.validate(parsed.body);
     if (validationError !== null) {
@@ -113,6 +222,7 @@ async function runPipeline(
           kind: request.kind,
           providerId: options.provider.id,
           stage: 'validate',
+          code: 'INVALID_JSON_SHAPE',
           message: validationError,
         },
       };
@@ -130,6 +240,7 @@ async function runPipeline(
           kind: request.kind,
           providerId: options.provider.id,
           stage: 'validate',
+          code: validatorErrorCode(built.message),
           message: built.message,
           line: built.line,
         },
@@ -137,6 +248,9 @@ async function runPipeline(
     }
   }
 
+  // 5) Success. If we truncated, surface a warning so callers know
+  //    the artifact body is incomplete (validator still ran; the
+  //    artifact may or may not be valid for downstream rendering).
   return {
     ok: true,
     artifact: {
@@ -144,8 +258,39 @@ async function runPipeline(
       body: parsed.body,
       providerId: options.provider.id,
       model: options.model ?? options.provider.defaultModel,
+      ...(truncated ? { warning: 'Response was truncated by maxResponseBytes; artifact may be incomplete.' } : {}),
     },
   };
+}
+
+/**
+ * Map a parse-error message to a stable error code. The parser returns
+ * freeform strings; this keeps the code stable across releases.
+ */
+function parseErrorCode(message: string): ArtifactErrorCode {
+  if (message.startsWith('Empty code fence')) return 'PARSE_EMPTY_FENCE';
+  if (message.startsWith('Unbalanced code fence')) return 'PARSE_UNBALANCED_FENCE';
+  return 'PARSE_NO_FENCE';
+}
+
+/**
+ * Map a validator-error message to a stable error code. Freeform
+ * strings remain the source of truth for humans; the code is for
+ * programmatic branching.
+ */
+function validatorErrorCode(message: string): ArtifactErrorCode {
+  if (message.startsWith('Body is not valid JSON')) return 'JSON_PARSE_FAILED';
+  if (message.startsWith('Unbalanced JSX tags')) return 'UNBALANCED_TAGS';
+  if (message.startsWith('Unknown component:')) return 'UNKNOWN_COMPONENT';
+  if (
+    message.includes('eval(') ||
+    message.includes('new Function(') ||
+    message.includes('import') ||
+    message.includes('require(')
+  ) {
+    return 'FORBIDDEN_CONSTRUCT';
+  }
+  return 'INVALID_JSON_SHAPE';
 }
 
 // Lazy prompt resolvers. We can't statically import the prompts because
@@ -194,6 +339,10 @@ function truncateWithFenceAwareness(raw: string, maxBytes: number): string {
   }
   // No closing fence inside the budget. Just append one.
   return head + TRUNC_MARKER + '\n```';
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**

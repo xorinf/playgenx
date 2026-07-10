@@ -1,4 +1,4 @@
-import type { Provider } from '@playgenx/types';
+import type { Provider, ProviderCompleteOptions } from '@playgenx/types';
 
 /**
  * Thrown by {@link OpenAIProvider} on any failure.
@@ -63,6 +63,8 @@ interface ChatCompletionRequest {
   model: string;
   messages: { role: 'system' | 'user' | 'assistant'; content: string }[];
   temperature: number;
+  /** Optional server-side cap on output tokens. Only sent when set. */
+  max_tokens?: number;
 }
 
 /** Response shape we read from the chat completions endpoint. */
@@ -113,7 +115,7 @@ export class OpenAIProvider implements Provider {
     this.systemPrompt = options.systemPrompt;
   }
 
-  async complete(prompt: string, options?: { model?: string }): Promise<string> {
+  async complete(prompt: string, options?: ProviderCompleteOptions): Promise<string> {
     const apiKey = this.apiKey ?? process.env.OPENAI_API_KEY;
     if (!apiKey) {
       throw new OpenAIError(
@@ -128,24 +130,38 @@ export class OpenAIProvider implements Provider {
     }
     messages.push({ role: 'user', content: prompt });
 
+    // Per-call timeout overrides the constructor default. Per-call
+    // maxRetries is honored by the runPipeline retry loop in @playgenx/core,
+    // not here (this provider's internal retry was the v0.1.x behavior;
+    // v0.2.x+ lets the caller drive retries via runPipeline).
+    const effectiveTimeoutMs = options?.timeoutMs ?? this.timeoutMs;
+
     const body: ChatCompletionRequest = {
       model: options?.model ?? this.defaultModel,
       messages,
       temperature: this.temperature,
     };
+    // Send max_tokens server-side only when the caller explicitly set
+    // it. Otherwise we let OpenAI apply its own default (or whatever
+    // the model supports). Setting it arbitrarily would cap response
+    // length and degrade quality.
+    if (typeof options?.maxTokens === 'number') {
+      body.max_tokens = options.maxTokens;
+    }
 
-    return this.attemptWithRetries(url, apiKey, body);
+    return this.attemptWithRetries(url, apiKey, body, effectiveTimeoutMs);
   }
 
   private async attemptWithRetries(
     url: string,
     apiKey: string,
     body: ChatCompletionRequest,
+    timeoutMs: number,
   ): Promise<never> {
     let lastError: OpenAIError | undefined;
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
       try {
-        return await this.attemptOnce(url, apiKey, body);
+        return await this.attemptOnce(url, apiKey, body, timeoutMs);
       } catch (err) {
         if (err instanceof OpenAIError && err.status !== undefined && RETRYABLE_STATUSES.has(err.status) && attempt < this.maxRetries) {
           lastError = err;
@@ -171,9 +187,10 @@ export class OpenAIProvider implements Provider {
     url: string,
     apiKey: string,
     body: ChatCompletionRequest,
+    timeoutMs: number,
   ): Promise<string> {
     const ac = new AbortController();
-    const timer = this.timeoutMs > 0 ? setTimeout(() => ac.abort(), this.timeoutMs) : null;
+    const timer = timeoutMs > 0 ? setTimeout(() => ac.abort(), timeoutMs) : null;
 
     let response: Response;
     try {
@@ -189,7 +206,7 @@ export class OpenAIProvider implements Provider {
     } catch (err) {
       if (timer !== null) clearTimeout(timer);
       if (err instanceof Error && err.name === 'AbortError') {
-        throw new OpenAIError(`OpenAI request timed out after ${this.timeoutMs}ms`, {
+        throw new OpenAIError(`OpenAI request timed out after ${timeoutMs}ms`, {
           cause: err,
         });
       }

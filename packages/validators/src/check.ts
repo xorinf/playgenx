@@ -30,14 +30,14 @@ const JSON_KIND_SHAPES: Readonly<Record<string, (parsed: unknown) => string | nu
         return `poll option ${i} is not an object`;
       }
       if (typeof opt.id !== 'string' || opt.id.length === 0) {
-        return `poll option ${i} is missing \`id\` (must be a non-empty string)`;
+        return `poll option ${i} is missing ` + '`id`' + ` (must be a non-empty string)`;
       }
       if (optionIds.has(opt.id as string)) {
-        return `poll has duplicate option \`id\` "${opt.id}"`;
+        return `poll has duplicate option ` + '`id`' + ` "${opt.id}"`;
       }
       optionIds.add(opt.id as string);
       if (typeof opt.label !== 'string') {
-        return `poll option ${i} is missing \`label\` (must be a string)`;
+        return `poll option ${i} is missing ` + '`label`' + ` (must be a string)`;
       }
     }
     return null;
@@ -56,14 +56,14 @@ const JSON_KIND_SHAPES: Readonly<Record<string, (parsed: unknown) => string | nu
         return `quiz question ${i} is not an object`;
       }
       if (typeof qq.id !== 'string' || qq.id.length === 0) {
-        return `quiz question ${i} is missing \`id\` (must be a non-empty string)`;
+        return `quiz question ${i} is missing ` + '`id`' + ` (must be a non-empty string)`;
       }
       if (seenQuestionIds.has(qq.id as string)) {
-        return `quiz question ${i} has duplicate \`id\` "${qq.id}"`;
+        return `quiz question ${i} has duplicate ` + '`id`' + ` "${qq.id}"`;
       }
       seenQuestionIds.add(qq.id as string);
       if (typeof qq.prompt !== 'string' || qq.prompt.length === 0) {
-        return `quiz question ${i} is missing \`prompt\``;
+        return `quiz question ${i} is missing ` + '`prompt`';
       }
       if (!Array.isArray(qq.options) || qq.options.length < 2 || qq.options.length > 4) {
         return `quiz question ${i} must have between 2 and 4 options`;
@@ -75,21 +75,21 @@ const JSON_KIND_SHAPES: Readonly<Record<string, (parsed: unknown) => string | nu
           return `quiz q${i} option ${j} is not an object`;
         }
         if (typeof o.id !== 'string' || o.id.length === 0) {
-          return `quiz q${i} option ${j} is missing \`id\` (must be a non-empty string)`;
+          return `quiz q${i} option ${j} is missing ` + '`id`' + ` (must be a non-empty string)`;
         }
         if (optionIds.has(o.id as string)) {
-          return `quiz q${i} has duplicate option \`id\` "${o.id}"`;
+          return `quiz q${i} has duplicate option ` + '`id`' + ` "${o.id}"`;
         }
         optionIds.add(o.id as string);
         if (typeof o.label !== 'string') {
-          return `quiz q${i} option ${j} is missing \`label\` (must be a string)`;
+          return `quiz q${i} option ${j} is missing ` + '`label`' + ` (must be a string)`;
         }
       }
       if (typeof qq.answer !== 'string' || (qq.answer as string).length === 0) {
-        return `quiz question ${i} is missing \`answer\` (must be a non-empty string id)`;
+        return `quiz question ${i} is missing ` + '`answer`' + ` (must be a non-empty string id)`;
       }
       if (!optionIds.has(qq.answer as string)) {
-        return `quiz question ${i}:\`answer\` ("${qq.answer}") doesn't match any option id`;
+        return `quiz question ${i}: ` + '`answer`' + ` ("${qq.answer}") doesn't match any option id`;
       }
     }
     return null;
@@ -108,17 +108,17 @@ const JSON_KIND_SHAPES: Readonly<Record<string, (parsed: unknown) => string | nu
         return `flashcard ${i} is not an object`;
       }
       if (typeof c.id !== 'string' || c.id.length === 0) {
-        return `flashcard ${i} is missing \`id\``;
+        return `flashcard ${i} is missing ` + '`id`';
       }
       if (seenIds.has(c.id as string)) {
-        return `flashcard ${i} has duplicate \`id\` "${c.id}"`;
+        return `flashcard ${i} has duplicate ` + '`id`' + ` "${c.id}"`;
       }
       seenIds.add(c.id as string);
       if (typeof c.front !== 'string' || c.front.length === 0) {
-        return `flashcard ${i} is missing \`front\``;
+        return `flashcard ${i} is missing ` + '`front`';
       }
       if (typeof c.back !== 'string' || c.back.length === 0) {
-        return `flashcard ${i} is missing \`back\``;
+        return `flashcard ${i} is missing ` + '`back`';
       }
     }
     return null;
@@ -178,7 +178,7 @@ export function validate(
     if (BUILT_IN_SET.has(tag.toLowerCase())) continue;
     return {
       message: `Unknown component: ${tag}. Add it to your registry or use a built-in HTML tag.`,
-      line: lineOfFirst(body, `<${tag}>`),
+      line: lineOfFirst(body, `<${tag}`),
     };
   }
 
@@ -186,8 +186,16 @@ export function validate(
 }
 
 /**
- * Validate a body for a specific artifact kind. Extends validate() with
- * kind-specific JSON shape checks for poll/quiz/flashcards.
+ * Validate a body for a specific artifact kind.
+ *
+ * For JSON-bodied kinds (poll, quiz, flashcards): parse the body as JSON
+ * and run the kind-specific shape check. The base TSX validation
+ * (tag balance, eval/import rejection, registry check) is SKIPPED for
+ * these kinds — it's wasted work and produces worse error messages on
+ * malformed JSON.
+ *
+ * For TSX-bodied kinds (playground, simulation, lab): run the base
+ * validate() with the kind's JSX-balance policy applied.
  */
 export function validateForKind(
   kind: string,
@@ -195,12 +203,7 @@ export function validateForKind(
   registry: Registry = DEFAULT_REGISTRY,
   options: ValidateOptions = {},
 ): ValidationError | null {
-  const baseError = validate(body, registry, {
-    ...options,
-    skipJsxCheck: options.skipJsxCheck ?? JSON_KINDS.has(kind),
-  });
-  if (baseError) return baseError;
-
+  // JSON-bodied kinds: go straight to parse + shape check.
   if (JSON_KINDS.has(kind) && !options.skipJsonCheck) {
     let parsed: unknown;
     try {
@@ -212,13 +215,21 @@ export function validateForKind(
       };
     }
     const shapeCheck = JSON_KIND_SHAPES[kind];
-    if (shapeCheck) {
-      const shapeErr = shapeCheck(parsed);
-      if (shapeErr) {
-        return { message: shapeErr, line: 1 };
-      }
+    const shapeErr = shapeCheck ? shapeCheck(parsed) : null;
+    if (shapeErr) {
+      return { message: shapeErr, line: 1 };
     }
+    return null;
   }
 
-  return null;
+  // TSX-bodied kinds: run the base validation (tag balance + safety +
+  // registry check). For JSON kinds we already returned above, so this
+  // path is exclusively for playground / simulation / lab.
+  return validate(body, registry, {
+    ...options,
+    // JSON kinds always skip the JSX check; pass through the caller's
+    // preference otherwise. We never reach here for JSON kinds, but the
+    // setting is documented as the default for them.
+    skipJsxCheck: options.skipJsxCheck ?? JSON_KINDS.has(kind),
+  });
 }

@@ -3,9 +3,18 @@
  *
  * These are thin typed wrappers around `JSON.parse` that return a
  * discriminated result. The validator's JSON shape check (see
- * `validateForKind` in @playgenx/validators) is the source of truth
- * for "is this body well-formed?" — these parsers just turn a
- * validated body into a typed value.
+ * `validateForKind` in @playgenx/validators) is the SOURCE OF TRUTH
+ * for "is this body well-formed?" — these parsers trust that the
+ * body has already been validated.
+ *
+ * If you call these with a body that did NOT pass `validateForKind`
+ * for the matching kind, behaviour is undefined: the parser may throw
+ * (e.g. `TypeError: cannot read 'foo' of undefined`), or return
+ * garbage. The runtime path inside `generateX` ALWAYS validates first,
+ * so this only matters for direct callers.
+ *
+ * If you need to validate and parse in one step, call
+ * `validateForKind` yourself before calling these.
  *
  * @packageDocumentation
  */
@@ -25,12 +34,13 @@ export type ParseErr = { ok: false; error: string };
 export type ParseResult<T> = ParseOk<T> | ParseErr;
 
 /**
- * Parse a poll body returned by {@link generatePoll}. Returns a typed
- * result with the validated shape.
+ * Parse a poll body that has already been validated via
+ * {@link validateForKind} for the `poll` kind. Returns a typed value.
  *
- * Caller must ensure the body has already been validated with
- * {@link validateForKind} from @playgenx/validators. This function
- * trusts the shape and only does JSON.parse + type narrowing.
+ * Throws `SyntaxError` if the body is not valid JSON (the validator
+ * catches this earlier in the `generatePoll` pipeline, so it should
+ * not happen in normal use). The output is trusted as conforming to
+ * the `Poll` shape.
  */
 export function parsePollBody(body: string): ParseResult<Poll> {
   let raw: unknown;
@@ -39,35 +49,24 @@ export function parsePollBody(body: string): ParseResult<Poll> {
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
-  if (!raw || typeof raw !== 'object') {
-    return { ok: false, error: 'expected a JSON object' };
-  }
-  const r = raw as Record<string, unknown>;
-  if (typeof r.question !== 'string') {
-    return { ok: false, error: 'missing `question` (string)' };
-  }
-  if (!Array.isArray(r.options)) {
-    return { ok: false, error: 'missing `options` (array)' };
-  }
-  const options: PollOption[] = [];
-  for (let i = 0; i < r.options.length; i++) {
-    const opt = r.options[i] as Record<string, unknown>;
-    if (typeof opt.id !== 'string' || typeof opt.label !== 'string') {
-      return { ok: false, error: `option ${i}: id and label must be strings` };
-    }
-    options.push({ id: opt.id, label: opt.label });
-  }
+  // The validator has already enforced: top-level object, non-empty
+  // `question` string, options array of 2-4 objects each with
+  // non-empty string id and string label. Cast through the trusted
+  // shape.
+  const r = raw as { question: string; options: Array<{ id: string; label: string }> };
+  const options: PollOption[] = r.options.map((o) => ({ id: o.id, label: o.label }));
   return {
     ok: true,
-    value: {
-      question: r.question,
-      options,
-    },
+    value: { question: r.question, options },
   };
 }
 
 /**
- * Parse a quiz body returned by {@link generateQuiz}.
+ * Parse a quiz body that has already been validated via
+ * {@link validateForKind} for the `quiz` kind. Returns a typed value.
+ *
+ * Throws `SyntaxError` if the body is not valid JSON. The output is
+ * trusted as conforming to the `Quiz` shape.
  */
 export function parseQuizBody(body: string): ParseResult<Quiz> {
   let raw: unknown;
@@ -76,45 +75,32 @@ export function parseQuizBody(body: string): ParseResult<Quiz> {
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
-  if (!raw || typeof raw !== 'object') {
-    return { ok: false, error: 'expected a JSON object' };
-  }
-  const r = raw as Record<string, unknown>;
-  if (!Array.isArray(r.questions)) {
-    return { ok: false, error: 'missing `questions` (array)' };
-  }
-  const questions: QuizQuestion[] = [];
-  for (let i = 0; i < r.questions.length; i++) {
-    const q = r.questions[i] as Record<string, unknown>;
-    if (typeof q.id !== 'string' || typeof q.prompt !== 'string') {
-      return { ok: false, error: `question ${i}: id and prompt must be strings` };
-    }
-    if (!Array.isArray(q.options)) {
-      return { ok: false, error: `question ${i}: options must be an array` };
-    }
-    const options: PollOption[] = [];
-    for (let j = 0; j < q.options.length; j++) {
-      const o = q.options[j] as Record<string, unknown>;
-      if (typeof o.id !== 'string' || typeof o.label !== 'string') {
-        return { ok: false, error: `question ${i} option ${j}: id and label must be strings` };
-      }
-      options.push({ id: o.id, label: o.label });
-    }
-    if (typeof q.answer !== 'string') {
-      return { ok: false, error: `question ${i}: answer must be a string` };
-    }
-    questions.push({
-      id: q.id,
-      prompt: q.prompt,
-      options,
-      answer: q.answer,
-    });
-  }
+  // The validator has already enforced: questions array of 3-8
+  // objects, each with id/prompt/options/answer that conform.
+  const r = raw as {
+    questions: Array<{
+      id: string;
+      prompt: string;
+      options: Array<{ id: string; label: string }>;
+      answer: string;
+    }>;
+  };
+  const questions: QuizQuestion[] = r.questions.map((q) => ({
+    id: q.id,
+    prompt: q.prompt,
+    options: q.options.map((o) => ({ id: o.id, label: o.label })),
+    answer: q.answer,
+  }));
   return { ok: true, value: { questions } };
 }
 
 /**
- * Parse a flashcards body returned by {@link generateFlashcards}.
+ * Parse a flashcards body that has already been validated via
+ * {@link validateForKind} for the `flashcards` kind. Returns a typed
+ * value.
+ *
+ * Throws `SyntaxError` if the body is not valid JSON. The output is
+ * trusted as conforming to the flashcards shape.
  */
 export function parseFlashcardsBody(body: string): ParseResult<{ cards: Flashcard[] }> {
   let raw: unknown;
@@ -123,24 +109,13 @@ export function parseFlashcardsBody(body: string): ParseResult<{ cards: Flashcar
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
-  if (!raw || typeof raw !== 'object') {
-    return { ok: false, error: 'expected a JSON object' };
-  }
-  const r = raw as Record<string, unknown>;
-  if (!Array.isArray(r.cards)) {
-    return { ok: false, error: 'missing `cards` (array)' };
-  }
-  const cards: Flashcard[] = [];
-  for (let i = 0; i < r.cards.length; i++) {
-    const c = r.cards[i] as Record<string, unknown>;
-    if (
-      typeof c.id !== 'string' ||
-      typeof c.front !== 'string' ||
-      typeof c.back !== 'string'
-    ) {
-      return { ok: false, error: `card ${i}: id, front, back must be strings` };
-    }
-    cards.push({ id: c.id, front: c.front, back: c.back });
-  }
+  // The validator has already enforced: cards array of 5-20 objects
+  // each with non-empty id and non-empty front/back strings.
+  const r = raw as { cards: Array<{ id: string; front: string; back: string }> };
+  const cards: Flashcard[] = r.cards.map((c) => ({
+    id: c.id,
+    front: c.front,
+    back: c.back,
+  }));
   return { ok: true, value: { cards } };
 }

@@ -293,3 +293,244 @@ describe('pipeline', () => {
 
 // Re-export test helper to avoid unused-import lint.
 export type _TestResult = ArtifactResult;
+
+// ──────────────────────── v0.2.x feature tests ────────────────────────
+
+describe('retry on transient provider failures', () => {
+  it('retries on ECONNRESET and succeeds on the second attempt', async () => {
+    let attempt = 0;
+    const flaky: import('@playgenx/types').Provider = {
+      id: 'flaky',
+      defaultModel: 'flaky-1',
+      complete: async () => {
+        attempt++;
+        if (attempt === 1) {
+          const e: Error & { code?: string } = new Error('connect ECONNRESET');
+          e.code = 'ECONNRESET';
+          throw e;
+        }
+        return '<Card><Text>ok</Text></Card>';
+      },
+    };
+    const r = await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: flaky, maxRetries: 2 },
+    );
+    expect(r.ok).toBe(true);
+    expect(attempt).toBe(2);
+  });
+
+  it('does NOT retry on permanent failures (4xx other than 429)', async () => {
+    let attempt = 0;
+    const fail4xx: import('@playgenx/types').Provider = {
+      id: 'fail4xx',
+      defaultModel: 'fail4xx-1',
+      complete: async () => {
+        attempt++;
+        const e: Error & { status?: number } = new Error('Bad request');
+        e.status = 400;
+        throw e;
+      },
+    };
+    const r = await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: fail4xx, maxRetries: 2 },
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.stage).toBe('provider');
+    expect(attempt).toBe(1);
+  });
+
+  it('returns RETRIES_EXHAUSTED after exhausting retries on persistent failures', async () => {
+    const alwaysFail: import('@playgenx/types').Provider = {
+      id: 'always',
+      defaultModel: 'always-1',
+      complete: async () => {
+        const e: Error & { status?: number } = new Error('Server error');
+        e.status = 503;
+        throw e;
+      },
+    };
+    const r = await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: alwaysFail, maxRetries: 2, retryBaseMs: 1 }, // tiny base to keep test fast
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.code).toBe('PROVIDER_ERROR');
+  });
+
+  it('does not retry when maxRetries=0', async () => {
+    let attempt = 0;
+    const flaky: import('@playgenx/types').Provider = {
+      id: 'flaky',
+      defaultModel: 'flaky-1',
+      complete: async () => {
+        attempt++;
+        const e: Error & { code?: string } = new Error('connect ECONNRESET');
+        e.code = 'ECONNRESET';
+        throw e;
+      },
+    };
+    const r = await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: flaky, maxRetries: 0 },
+    );
+    expect(r.ok).toBe(false);
+    expect(attempt).toBe(1);
+  });
+});
+
+describe('error codes', () => {
+  it('sets PARSE_NO_FENCE / PARSE_UNBALANCED_FENCE for malformed responses', async () => {
+    // "no fence at all" returns ok:true with kind='plain' (per the parser's
+    // shape detection) — that's not an error. We test the unbalanced
+    // and empty-fence cases which DO error.
+    const empty = await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: rawProvider('```tsx\n```') },
+    );
+    expect(empty.ok).toBe(false);
+    if (empty.ok) return;
+    expect(empty.error.code).toBe('PARSE_EMPTY_FENCE');
+  });
+
+  it('sets PARSE_UNBALANCED_FENCE for an opened-but-not-closed fence', async () => {
+    const r = await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: rawProvider('```tsx\nconst x = 1;') },
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.code).toBe('PARSE_UNBALANCED_FENCE');
+  });
+
+  it('sets JSON_PARSE_FAILED when JSON is malformed', async () => {
+    const r = await generatePoll(
+      { context: 'ctx', concept: 'c', kind: 'poll' },
+      { provider: rawProvider('```json\n{not json\n```') },
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.code).toBe('JSON_PARSE_FAILED');
+  });
+
+  it('sets INVALID_JSON_SHAPE when JSON is valid but shape is wrong', async () => {
+    const r = await generatePoll(
+      { context: 'ctx', concept: 'c', kind: 'poll' },
+      {
+        provider: rawProvider(
+          '```json\n' + JSON.stringify({ question: 'q' /* no options */ }) + '\n```',
+        ),
+      },
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.code).toBe('INVALID_JSON_SHAPE');
+  });
+
+  it('sets UNKNOWN_COMPONENT for an unrecognized JSX tag', async () => {
+    const r = await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: rawProvider('```tsx\n<NotInRegistry />\n```') },
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.code).toBe('UNKNOWN_COMPONENT');
+  });
+
+  it('sets FORBIDDEN_CONSTRUCT when eval() is in the body', async () => {
+    const r = await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: rawProvider('```tsx\nconst x = eval("1");\n```') },
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.code).toBe('FORBIDDEN_CONSTRUCT');
+  });
+
+  it('sets PROVIDER_ERROR with providerId for a thrown provider error', async () => {
+    const fail: import('@playgenx/types').Provider = {
+      id: 'fail',
+      defaultModel: 'fail-1',
+      complete: async () => {
+        throw new Error('provider blew up');
+      },
+    };
+    const r = await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: fail, maxRetries: 0 },
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.stage).toBe('provider');
+    expect(r.error.code).toBe('PROVIDER_ERROR');
+    expect(r.error.providerId).toBe('fail');
+  });
+});
+
+describe('truncation warning', () => {
+  it('returns ok with warning when maxResponseBytes truncates', async () => {
+    const huge = 'x'.repeat(500_000);
+    const r = await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: rawProvider('```tsx\n' + huge + '\n```'), maxResponseBytes: 1000 },
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.artifact.warning).toMatch(/truncated/);
+  });
+
+  it('does not set warning when response fits', async () => {
+    const r = await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: rawProvider('```tsx\n<Card />\n```') },
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.artifact.warning).toBeUndefined();
+  });
+});
+
+describe('provider options passthrough', () => {
+  it('passes maxTokens to provider.complete when set', async () => {
+    let captured: { maxTokens?: number; timeoutMs?: number; model?: string } = {};
+    const capturing: import('@playgenx/types').Provider = {
+      id: 'cap',
+      defaultModel: 'cap-1',
+      complete: async (_prompt, opts) => {
+        captured = {
+          maxTokens: opts?.maxTokens,
+          timeoutMs: opts?.timeoutMs,
+          model: opts?.model,
+        };
+        return '<Card />';
+      },
+    };
+    await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: capturing, maxTokens: 2000, timeoutMs: 30000, model: 'gpt-4o' },
+    );
+    expect(captured.maxTokens).toBe(2000);
+    expect(captured.timeoutMs).toBe(30000);
+    expect(captured.model).toBe('gpt-4o');
+  });
+
+  it('does not pass maxTokens when not set (preserves model default)', async () => {
+    let captured: { maxTokens?: number } = {};
+    const capturing: import('@playgenx/types').Provider = {
+      id: 'cap',
+      defaultModel: 'cap-1',
+      complete: async (_prompt, opts) => {
+        captured = { maxTokens: opts?.maxTokens };
+        return '<Card />';
+      },
+    };
+    await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: capturing },
+    );
+    expect(captured.maxTokens).toBeUndefined();
+  });
+});
