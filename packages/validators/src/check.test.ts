@@ -314,6 +314,143 @@ describe('validateForKind (kind-specific JSON shape checks)', () => {
       );
       expect(err?.message).toMatch(/flashcard 0 is missing `back`/);
     });
+
+    it('rejects duplicate card IDs', () => {
+      const err = validateForKind(
+        'flashcards',
+        JSON.stringify({
+          cards: [
+            { id: 'c1', front: 'F1', back: 'B1' },
+            { id: 'c1', front: 'F2', back: 'B2' }, // dup
+            { id: 'c3', front: 'F3', back: 'B3' },
+            { id: 'c4', front: 'F4', back: 'B4' },
+            { id: 'c5', front: 'F5', back: 'B5' },
+          ],
+        }),
+      );
+      expect(err?.message).toMatch(/flashcard 1 has duplicate `id` "c1"/);
+    });
+
+    it('rejects a card that is not an object', () => {
+      const err = validateForKind(
+        'flashcards',
+        JSON.stringify({
+          cards: [
+            { id: 'c1', front: 'F1', back: 'B1' },
+            'not an object',
+            { id: 'c3', front: 'F3', back: 'B3' },
+            { id: 'c4', front: 'F4', back: 'B4' },
+            { id: 'c5', front: 'F5', back: 'B5' },
+          ],
+        }),
+      );
+      expect(err?.message).toMatch(/flashcard 1 is not an object/);
+    });
+  });
+
+  // ────────────────── new poll/quiz validation (v0.2.x) ──────────────────
+  describe('poll: duplicate IDs and non-object entries', () => {
+    it('rejects duplicate option IDs', () => {
+      const err = validateForKind(
+        'poll',
+        JSON.stringify({
+          question: 'q',
+          options: [
+            { id: 'a', label: '1' },
+            { id: 'a', label: '2' }, // dup
+          ],
+        }),
+      );
+      expect(err?.message).toMatch(/poll has duplicate option `id` "a"/);
+    });
+
+    it('rejects an option that is not an object', () => {
+      const err = validateForKind(
+        'poll',
+        JSON.stringify({
+          question: 'q',
+          options: [{ id: 'a', label: '1' }, null],
+        }),
+      );
+      expect(err?.message).toMatch(/poll option 1 is not an object/);
+    });
+  });
+
+  describe('quiz: duplicate IDs, non-object entries, non-empty answer', () => {
+    it('rejects duplicate question IDs across the deck', () => {
+      const err = validateForKind(
+        'quiz',
+        JSON.stringify({
+          questions: [
+            { id: 'q1', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'a' },
+            { id: 'q1', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'a' }, // dup
+            { id: 'q3', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'a' },
+          ],
+        }),
+      );
+      expect(err?.message).toMatch(/quiz question 1 has duplicate `id` "q1"/);
+    });
+
+    it('rejects duplicate option IDs within a question', () => {
+      const err = validateForKind(
+        'quiz',
+        JSON.stringify({
+          questions: [
+            { id: 'q1', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'a', label: 'B' }], answer: 'a' },
+            { id: 'q2', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'a' },
+            { id: 'q3', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'a' },
+          ],
+        }),
+      );
+      expect(err?.message).toMatch(/quiz q0 has duplicate option `id` "a"/);
+    });
+
+    it('rejects empty-string answer', () => {
+      const err = validateForKind(
+        'quiz',
+        JSON.stringify({
+          questions: [
+            { id: 'q1', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: '' },
+            { id: 'q2', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'a' },
+            { id: 'q3', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'a' },
+          ],
+        }),
+      );
+      expect(err?.message).toMatch(/quiz question 0 is missing `answer`/);
+    });
+
+    it('rejects a question that is not an object', () => {
+      const err = validateForKind(
+        'quiz',
+        JSON.stringify({
+          questions: [
+            null,
+            { id: 'q2', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'a' },
+            { id: 'q3', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'a' },
+          ],
+        }),
+      );
+      expect(err?.message).toMatch(/quiz question 0 is not an object/);
+    });
+
+    it('scopes option IDs per question (does not leak across questions)', () => {
+      // Previously the optionIds set was hoisted outside the loop, so
+      // question 0 could have answer="x" where "x" was an option in question 2.
+      // After the fix, option IDs are scoped per question.
+      const err = validateForKind(
+        'quiz',
+        JSON.stringify({
+          questions: [
+            { id: 'q1', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'c' },
+            { id: 'q2', prompt: 'p', options: [{ id: 'c', label: 'C' }, { id: 'd', label: 'D' }], answer: 'c' },
+            { id: 'q3', prompt: 'p', options: [{ id: 'e', label: 'E' }, { id: 'f', label: 'F' }], answer: 'e' },
+          ],
+        }),
+      );
+      // Question 0's answer "c" is NOT in its own options, even though
+      // question 1 has an option id "c". Should be rejected.
+      expect(err?.message).toMatch(/answer.*"c".*doesn't match/);
+    });
   });
 
   describe('TSX kinds (playground, simulation, lab)', () => {

@@ -7,5 +7,11 @@
  * @packageDocumentation
  */
 
-export { extractArtifact } from './extract.js';
-export type { ExtractKind, ParseError, ExtractResult } from './extract.js';
+export {
+  extractArtifact,
+  stripThinkingTags,
+  type ExtractKind,
+  type ExtractSource,
+  type ParseError,
+  type ExtractResult,
+} from './extract.js';

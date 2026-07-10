@@ -12,4 +12,9 @@ export interface ValidateOptions {
    * rendered as TSX.
    */
   readonly skipJsxCheck?: boolean;
+  /**
+   * Skip the JSON-shape check for JSON-bodied artifacts. Use this only
+   * if you've already validated the body yourself with a stricter schema.
+   */
+  readonly skipJsonCheck?: boolean;
 }
