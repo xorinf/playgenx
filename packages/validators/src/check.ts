@@ -9,8 +9,8 @@ const JSON_KINDS: ReadonlySet<string> = new Set(['poll', 'quiz', 'flashcards']);
 
 /**
  * Required top-level fields and rough shape checks for each JSON kind.
- * This isn't a full schema — it's a smoke test to catch the common
- * LLM mistakes (missing `question`, wrong `answer` field, etc).
+ * Not a full schema - a smoke test for common LLM mistakes: missing
+ * fields, wrong answer, duplicate IDs, non-object entries, etc.
  */
 const JSON_KIND_SHAPES: Readonly<Record<string, (parsed: unknown) => string | null>> = {
   poll: (parsed) => {
@@ -23,11 +23,19 @@ const JSON_KIND_SHAPES: Readonly<Record<string, (parsed: unknown) => string | nu
     if (p.options.length < 2 || p.options.length > 4) {
       return `poll must have between 2 and 4 options (got ${p.options.length})`;
     }
+    const optionIds = new Set<string>();
     for (let i = 0; i < p.options.length; i++) {
       const opt = p.options[i] as Record<string, unknown>;
+      if (!opt || typeof opt !== 'object') {
+        return `poll option ${i} is not an object`;
+      }
       if (typeof opt.id !== 'string' || opt.id.length === 0) {
         return `poll option ${i} is missing \`id\` (must be a non-empty string)`;
       }
+      if (optionIds.has(opt.id as string)) {
+        return `poll has duplicate option \`id\` "${opt.id}"`;
+      }
+      optionIds.add(opt.id as string);
       if (typeof opt.label !== 'string') {
         return `poll option ${i} is missing \`label\` (must be a string)`;
       }
@@ -41,28 +49,47 @@ const JSON_KIND_SHAPES: Readonly<Record<string, (parsed: unknown) => string | nu
     if (q.questions.length < 3 || q.questions.length > 8) {
       return `quiz must have between 3 and 8 questions (got ${q.questions.length})`;
     }
-    const optionIds = new Set<string>();
+    const seenQuestionIds = new Set<string>();
     for (let i = 0; i < q.questions.length; i++) {
       const qq = q.questions[i] as Record<string, unknown>;
+      if (!qq || typeof qq !== 'object') {
+        return `quiz question ${i} is not an object`;
+      }
       if (typeof qq.id !== 'string' || qq.id.length === 0) {
         return `quiz question ${i} is missing \`id\` (must be a non-empty string)`;
       }
+      if (seenQuestionIds.has(qq.id as string)) {
+        return `quiz question ${i} has duplicate \`id\` "${qq.id}"`;
+      }
+      seenQuestionIds.add(qq.id as string);
       if (typeof qq.prompt !== 'string' || qq.prompt.length === 0) {
         return `quiz question ${i} is missing \`prompt\``;
       }
       if (!Array.isArray(qq.options) || qq.options.length < 2 || qq.options.length > 4) {
         return `quiz question ${i} must have between 2 and 4 options`;
       }
+      const optionIds = new Set<string>();
       for (let j = 0; j < qq.options.length; j++) {
         const o = qq.options[j] as Record<string, unknown>;
-        if (typeof o.id !== 'string') return `quiz q${i} option ${j} missing id`;
-        optionIds.add(o.id);
+        if (!o || typeof o !== 'object') {
+          return `quiz q${i} option ${j} is not an object`;
+        }
+        if (typeof o.id !== 'string' || o.id.length === 0) {
+          return `quiz q${i} option ${j} is missing \`id\` (must be a non-empty string)`;
+        }
+        if (optionIds.has(o.id as string)) {
+          return `quiz q${i} has duplicate option \`id\` "${o.id}"`;
+        }
+        optionIds.add(o.id as string);
+        if (typeof o.label !== 'string') {
+          return `quiz q${i} option ${j} is missing \`label\` (must be a string)`;
+        }
       }
-      if (typeof qq.answer !== 'string') {
-        return `quiz question ${i} is missing \`answer\` (must be a string id)`;
+      if (typeof qq.answer !== 'string' || (qq.answer as string).length === 0) {
+        return `quiz question ${i} is missing \`answer\` (must be a non-empty string id)`;
       }
       if (!optionIds.has(qq.answer as string)) {
-        return `quiz question ${i}: \`answer\` ("${qq.answer}") doesn't match any option id`;
+        return `quiz question ${i}:\`answer\` ("${qq.answer}") doesn't match any option id`;
       }
     }
     return null;
@@ -74,11 +101,19 @@ const JSON_KIND_SHAPES: Readonly<Record<string, (parsed: unknown) => string | nu
     if (f.cards.length < 5 || f.cards.length > 20) {
       return `flashcards deck must have between 5 and 20 cards (got ${f.cards.length})`;
     }
+    const seenIds = new Set<string>();
     for (let i = 0; i < f.cards.length; i++) {
       const c = f.cards[i] as Record<string, unknown>;
+      if (!c || typeof c !== 'object') {
+        return `flashcard ${i} is not an object`;
+      }
       if (typeof c.id !== 'string' || c.id.length === 0) {
         return `flashcard ${i} is missing \`id\``;
       }
+      if (seenIds.has(c.id as string)) {
+        return `flashcard ${i} has duplicate \`id\` "${c.id}"`;
+      }
+      seenIds.add(c.id as string);
       if (typeof c.front !== 'string' || c.front.length === 0) {
         return `flashcard ${i} is missing \`front\``;
       }
@@ -90,27 +125,11 @@ const JSON_KIND_SHAPES: Readonly<Record<string, (parsed: unknown) => string | nu
   },
 };
 
-export interface ValidateOptions {
-  /**
-   * Skip the JSX-tag balance check. Use for JSON-bodied artifacts
-   * (poll, quiz, flashcards) where the body is parsed as data, not
-   * rendered as TSX.
-   */
-  readonly skipJsxCheck?: boolean;
-  /**
-   * Skip the JSON-shape check for JSON-bodied artifacts. Use this only
-   * if you've already validated the body yourself with a stricter schema.
-   */
-  readonly skipJsonCheck?: boolean;
-}
-
 /**
  * Check a parsed artifact body for safety and registry membership.
  *
  * For JSON-bodied kinds (poll, quiz, flashcards), also verifies that
- * the body parses as JSON and roughly matches the expected shape. This
- * catches common LLM mistakes (missing fields, wrong `answer`, etc.)
- * before the caller has to deal with them.
+ * the body parses as JSON and roughly matches the expected shape.
  */
 export function validate(
   body: string,
@@ -119,29 +138,31 @@ export function validate(
 ): ValidationError | null {
   const stripped = stripCodeComments(body);
 
-  // 1. No eval / new Function.
+  // 1. No eval / new Function. Substring matching only - we never call
+  //    eval() or construct a Function ourselves. The point is to reject
+  //    artifact bodies that would themselves try to use them.
   const evalIdx = stripped.indexOf('eval(');
   if (evalIdx >= 0) {
-    return { message: '`eval(` is not allowed in artifacts', line: lineOfFirst(stripped, 'eval(') };
+    return { message: '`eval(`is not allowed in artifacts', line: lineOfFirst(stripped, 'eval(') };
   }
   const fnIdx = stripped.toLowerCase().indexOf('new function(');
   if (fnIdx >= 0) {
     const ln = lineOfFirst(stripped.toLowerCase(), 'new function(');
-    return { message: '`new Function(` is not allowed in artifacts', line: ln };
+    return { message: '`new Function(`is not allowed in artifacts', line: ln };
   }
 
   // 2. No imports / requires.
   const importIdx = stripped.toLowerCase().indexOf('import ');
   if (importIdx >= 0) {
     return {
-      message: '`import` statements are not allowed in artifacts',
+      message: '`import`statements are not allowed in artifacts',
       line: lineOfFirst(stripped.toLowerCase(), 'import '),
     };
   }
   const requireIdx = stripped.indexOf('require(');
   if (requireIdx >= 0) {
     return {
-      message: '`require(` is not allowed in artifacts',
+      message: '`require(`is not allowed in artifacts',
       line: lineOfFirst(stripped, 'require('),
     };
   }
@@ -157,7 +178,7 @@ export function validate(
     if (BUILT_IN_SET.has(tag.toLowerCase())) continue;
     return {
       message: `Unknown component: ${tag}. Add it to your registry or use a built-in HTML tag.`,
-      line: lineOfFirst(body, `<${tag}`),
+      line: lineOfFirst(body, `<${tag}>`),
     };
   }
 
@@ -165,11 +186,8 @@ export function validate(
 }
 
 /**
- * Validate a body for a specific artifact kind. Extends {@link validate}
- * with kind-specific JSON shape checks for poll/quiz/flashcards.
- *
- * Use this from the core pipeline; user-facing validators can stick
- * with {@link validate} for TSX bodies.
+ * Validate a body for a specific artifact kind. Extends validate() with
+ * kind-specific JSON shape checks for poll/quiz/flashcards.
  */
 export function validateForKind(
   kind: string,
@@ -177,15 +195,12 @@ export function validateForKind(
   registry: Registry = DEFAULT_REGISTRY,
   options: ValidateOptions = {},
 ): ValidationError | null {
-  // 1-4: same as validate().
   const baseError = validate(body, registry, {
     ...options,
-    // JSON kinds always skip the JSX check; pass through otherwise.
     skipJsxCheck: options.skipJsxCheck ?? JSON_KINDS.has(kind),
   });
   if (baseError) return baseError;
 
-  // 5. JSON shape check (only for JSON kinds, unless explicitly skipped).
   if (JSON_KINDS.has(kind) && !options.skipJsonCheck) {
     let parsed: unknown;
     try {

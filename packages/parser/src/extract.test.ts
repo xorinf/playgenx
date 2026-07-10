@@ -127,12 +127,17 @@ describe('extractArtifact', () => {
 
   it('handles 4-backtick fences by treating the inner ``` as content', () => {
     // ````tsx ... ```` — 4 backticks wrap a 3-backtick block.
-    // Our parser only handles 3-backtick fences, so this falls through to shape.
+    // Our parser only handles 3-backtick fences, so the inner pair (which
+    // has an empty body in this test case) is the "outer" fence; "inner"
+    // lives outside any fence and ends up as part of the (still empty)
+    // body. The parser correctly returns an "Empty code fence" error.
+    // Either way, no crash, no malformed result.
     const raw = '````tsx\n```\ninner\n```\n````';
     const result = extractArtifact(raw);
-    expect(result.ok).toBe(true);
-    // Either it's parsed as a 3-backtick fence (and we'd see the inner stuff as the body)
-    // or it's not recognized. Either way, no crash.
+    // Strict expectation: empty body inside a fence is now an error.
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.message).toMatch(/Empty code fence|Unbalanced/);
   });
 
   it('extracts from a fence preceded by prose on a different line', () => {
@@ -225,5 +230,146 @@ describe('extractArtifact', () => {
     // kind is 'plain' because shape-detect doesn't classify JSON-looking
     // text as tsx (doesn't start with <, function, etc).
     expect(result.kind).toBe('plain');
+  });
+
+  // ────────────────── thinking-tag stripping (v0.2.x) ──────────────────
+  describe('thinking tag stripping', () => {
+    it('strips a single <think> block before the fence', () => {
+      const raw =
+        '<think>The user wants a quiz. Let me plan 5 questions.\n' +
+        'Question 1 about binary search.\n</think>\n' +
+        '```json\n{"questions": []}\n```';
+      const result = extractArtifact(raw);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.kind).toBe('tsx');
+      expect(result.source).toBe('fence');
+      expect(result.body).toBe('{"questions": []}');
+    });
+
+    it('strips multiple think blocks (non-greedy)', () => {
+      const raw =
+        '<think>first thoughts</think>\n' +
+        '```tsx\n' +
+        'const x = 1;\n' +
+        '```\n' +
+        '<think>a follow-up thought</think>';
+      const result = extractArtifact(raw);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.body).toBe('const x = 1;');
+    });
+
+    it('strips thinking tags case-insensitively (<think>, <THINK>, <Think>)', () => {
+      for (const tag of ['think', 'THINK', 'Think', 'tHiNk']) {
+        const raw = `<${tag}>scratch</${tag}>\n\`\`\`tsx\nbody\n\`\`\``;
+        const result = extractArtifact(raw);
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.body).toBe('body');
+      }
+    });
+
+    it('strips <thinking>, <thought>, <reasoning>, <reflection>, <scratchpad>, <analysis>', () => {
+      const tags = [
+        'thinking',
+        'thought',
+        'reasoning',
+        'reflection',
+        'scratchpad',
+        'analysis',
+      ];
+      for (const tag of tags) {
+        const raw = `<${tag}>scratch</${tag}>\n\`\`\`tsx\nbody\n\`\`\``;
+        const result = extractArtifact(raw);
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.body).toBe('body');
+      }
+    });
+
+    it('strips Chinese thinking tags (o1思考, 思考)', () => {
+      const raw = '<o1思考>scratch</o1思考>\n```tsx\nbody\n```';
+      const result = extractArtifact(raw);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.body).toBe('body');
+    });
+
+    it('strips HTML/XML comments', () => {
+      const raw = '<!-- TODO: write the artifact -->\n```tsx\nbody\n```';
+      const result = extractArtifact(raw);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.body).toBe('body');
+    });
+
+    it('strips thinking tags inside an unfenced response', () => {
+      // No fence. After stripping the think block, the remaining body
+      // starts with `<div>` so shape-detect classifies as tsx.
+      const raw = '<think>I should write JSX</think><div>hi</div>';
+      const result = extractArtifact(raw);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.body).toBe('<div>hi</div>');
+      expect(result.kind).toBe('tsx');
+      expect(result.source).toBe('shape');
+    });
+
+    it('preserves content outside thinking blocks when stripping', () => {
+      const raw =
+        '<think>I will think about this carefully.</think>\n' +
+        'Here is the artifact:\n' +
+        '```tsx\nconst x = 42;\n```\n' +
+        'Hope that helps!';
+      const result = extractArtifact(raw);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.body).toBe('const x = 42;');
+    });
+
+    it('strips BOM plus thinking tag together', () => {
+      const raw = '﻿<think>scratch</think>\n```tsx\nbody\n```';
+      const result = extractArtifact(raw);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.body).toBe('body');
+    });
+
+    it('handles think block that contains newlines and quotes', () => {
+      const raw = `<think>Let me think about "binary search"
+and edge cases like empty arrays.
+</think>\`\`\`tsx
+const x = 1;
+\`\`\``;
+      const result = extractArtifact(raw);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.body).toBe('const x = 1;');
+    });
+
+    it('exports stripThinkingTags as a standalone helper', async () => {
+      const { stripThinkingTags } = await import('./extract.js');
+      expect(stripThinkingTags('<think>x</think>body')).toBe('body');
+      expect(stripThinkingTags('plain body')).toBe('plain body');
+    });
+  });
+
+  // ────────────────── empty fence body ──────────────────
+  it('returns an error for an empty fence body (model emitted nothing inside)', () => {
+    const raw = '```tsx\n```';
+    const result = extractArtifact(raw);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.message).toMatch(/Empty code fence/);
+  });
+
+  it('returns an error when only a thinking block was inside a fence', () => {
+    // Real failure mode: model writes ````tsx\n<think>...</think>\n```\n`.
+    const raw = '```tsx\n<think>all my output was thinking</think>\n```';
+    const result = extractArtifact(raw);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.message).toMatch(/Empty code fence/);
   });
 });

@@ -2,10 +2,12 @@
  * Replace the contents of string literals with spaces, preserving newlines
  * and quote characters so line numbers stay stable.
  *
- * Handles single-quoted, double-quoted, and template-literal strings
- * (without interpolation for v0.2.x). Escape sequences in single/double
- * quoted strings (e.g. `\"`) are handled — we only end the string on an
- * unescaped quote of the same kind.
+ * Handles:
+ * - single-quoted and double-quoted strings (with backslash escapes)
+ * - template literals WITHOUT interpolation (looks for the closing backtick)
+ * - template literals WITH `${...}` interpolation (recursively processes the
+ *   interpolated expression so JSX tags inside `${ <Foo /> }` don't fool
+ *   downstream tag-balancers)
  *
  * Used by {@link stripCodeComments}, {@link tagNames}, and
  * {@link hasBalancedTags} so the substring/tag-balance checks don't false
@@ -18,18 +20,63 @@ export function stripStrings(input: string): string {
   while (i < n) {
     const c = input.charCodeAt(i);
 
-    // Template literal (no ${} handling — we just look for the closing
-    // backtick).
+    // Template literal: handle `${...}` interpolation by recursing into
+    // the interpolated expression so any JSX inside is also "stringified"
+    // (i.e., its tag markers are replaced with spaces). The default case
+    // (no interpolation) just walks to the next backtick.
     if (c === 96 /* ` */) {
       out += '`';
       i++;
       while (i < n) {
-        if (input.charCodeAt(i) === 96) {
+        const cc = input.charCodeAt(i);
+        // End of template literal.
+        if (cc === 96) {
           out += '`';
           i++;
           break;
         }
-        out += input.charCodeAt(i) === 10 ? '\n' : ' ';
+        // Interpolation: scan past the `${`, recursively strip the inner
+        // expression (which may itself contain strings, template literals,
+        // or tags), then consume the closing `}`.
+        if (cc === 36 /* $ */ && i + 1 < n && input.charCodeAt(i + 1) === 123 /* { */) {
+          out += '$\x7B'; // preserve "${" visually for line-number stability
+          i += 2;
+          // Recursively strip the interpolated expression. Find the matching
+          // closing brace at the same nesting depth (braces inside the
+          // interpolation may nest — e.g. `${ {a:1}.a }`).
+          let depth = 1;
+          const innerStart = i;
+          while (i < n && depth > 0) {
+            const ic = input.charCodeAt(i);
+            if (ic === 123 /* { */) depth++;
+            else if (ic === 125 /* } */) {
+              depth--;
+              if (depth === 0) break;
+            }
+            // Skip over nested strings/template-literals so their braces
+            // don't change our depth count. Reuse stripStrings for this.
+            else if (ic === 34 || ic === 39 || ic === 96) {
+              const quote = ic;
+              i++;
+              while (i < n && input.charCodeAt(i) !== quote) {
+                if (input.charCodeAt(i) === 92 /* \ */) i++; // skip escape
+                i++;
+              }
+              // i is now at the closing quote (or n); the outer loop will
+              // re-check at the top.
+              continue;
+            }
+            i++;
+          }
+          const inner = input.slice(innerStart, i);
+          out += stripStrings(inner);
+          if (i < n && input.charCodeAt(i) === 125 /* } */) {
+            out += '}';
+            i++;
+          }
+          continue;
+        }
+        out += cc === 10 ? '\n' : ' ';
         i++;
       }
       continue;

@@ -20,10 +20,76 @@ export interface ParseError {
   readonly line?: number;
 }
 
+/** How we obtained the body — useful for logging and debugging. */
+export type ExtractSource = 'fence' | 'shape' | 'plain';
+
 /** Discriminated union: success carries a kind + body, failure carries an error. */
 export type ExtractResult =
-  | { ok: true; kind: ExtractKind; body: string }
+  | {
+      ok: true;
+      kind: ExtractKind;
+      body: string;
+      /** Whether the body came from a fenced code block or shape detection. */
+      source: ExtractSource;
+    }
   | { ok: false; error: ParseError };
+
+/**
+ * Strip the reasoning blocks that some models (o1, o3, Claude with extended
+ * thinking, DeepSeek-R1, Chinese model `<o1思考>...</o1思考>`) emit in their
+ * raw output. These are NOT part of the artifact body and would corrupt the
+ * parser if left in.
+ *
+ * We strip:
+ *   - `<TAG>...</TAG>` and `<tag>...</tag>` (case-insensitive) for any tag
+ *     listed in THINKING_TAGS.
+ *   - HTML/XML comments `<!-- ... -->` (some models use these as scratch space).
+ *
+ * The `[\s\S]*?` is the non-greedy any-character matcher so we match the
+ * shortest possible block — essential when there are multiple think blocks.
+ */
+const THINKING_TAGS = [
+  'think',
+  'thinking',
+  'thought',
+  'thoughts',
+  'reasoning',
+  'reflection',
+  'scratchpad',
+  'analysis',
+  // Chinese-localised variants seen in the wild.
+  'o1思考',
+  '思考',
+] as const;
+
+function buildThinkingTagStripper(): RegExp {
+  // Build `<think>[\s\S]*?</think>|<thinking>...</thinking>|...` from the
+  // THINKING_TAGS list. Case-insensitive flag is applied to the assembled
+  // regex.
+  const alternatives = THINKING_TAGS.map(
+    (tag) => `<${tag}>[\\s\\S]*?<\\/${tag}>`,
+  ).join('|');
+  return new RegExp(alternatives, 'gi');
+}
+
+const THINKING_TAG_RE = buildThinkingTagStripper();
+const HTML_COMMENT_RE = /<!--[\s\S]*?-->/g;
+
+/**
+ * Pre-process the raw LLM response before extraction:
+ *   1. Strip a BOM.
+ *   2. Strip thinking/reasoning blocks (the main fix).
+ *   3. Strip HTML/XML comments.
+ *
+ * Returns the cleaned text. Line breaks are preserved so error messages can
+ * still report accurate line numbers.
+ */
+export function stripThinkingTags(raw: string): string {
+  return raw
+    .replace(/^\uFEFF/, '')
+    .replace(THINKING_TAG_RE, '')
+    .replace(HTML_COMMENT_RE, '');
+}
 
 /**
  * Maps a fence language tag to an {@link ExtractKind}.
@@ -180,7 +246,11 @@ function findFence(
  * @returns Either a kinded body, or a {@link ParseError}.
  */
 export function extractArtifact(raw: string): ExtractResult {
-  const text = raw.replace(/^\uFEFF/, ''); // strip BOM if present
+  // Pre-process: strip thinking blocks, HTML comments, BOM. This is the
+  // single most important fix — o1/o3/Claude/DeepSeek-R1 emit `<think>...`
+  // before their fenced code block and we'd otherwise include the scratch
+  // text in the body.
+  const text = stripThinkingTags(raw);
 
   const open = findFence(text, 0);
   if (open) {
@@ -197,13 +267,37 @@ export function extractArtifact(raw: string): ExtractResult {
     const body = text
       .slice(open.afterIndex, close.index)
       .replace(/^[\r\n]+|[\r\n]+$/g, '');
-    return { ok: true, kind: kindFromTag(open.tag ?? ''), body };
+    // An empty body inside a fenced block is almost always a model bug —
+    // either the model emitted ````\n```\n```` with nothing in between,
+    // or the only content was a thinking block that we stripped. Surface
+    // this as a parse error instead of silently returning "".
+    if (body.length === 0) {
+      return {
+        ok: false,
+        error: {
+          message: 'Empty code fence (body is empty after extraction)',
+          line: openLine,
+        },
+      };
+    }
+    return {
+      ok: true,
+      kind: kindFromTag(open.tag ?? ''),
+      body,
+      source: 'fence',
+    };
   }
 
   // No fence — shape-detect.
   const trimmed = text.trim();
   if (trimmed.length === 0) {
-    return { ok: true, kind: 'plain', body: '' };
+    return { ok: true, kind: 'plain', body: '', source: 'plain' };
   }
-  return { ok: true, kind: shapeKind(trimmed), body: trimmed };
+  const kind = shapeKind(trimmed);
+  return {
+    ok: true,
+    kind,
+    body: trimmed,
+    source: kind === 'plain' ? 'plain' : 'shape',
+  };
 }
