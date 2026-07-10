@@ -18,8 +18,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "pnpm -r --filter './packages/*' run build && pnpm --filter playgenx-playground run build",
-    "build:packages": "pnpm -r --filter './packages/*' run build",
+    "build": "pnpm -r --filter './packages/*' --workspace-concurrency=1 run build && pnpm --filter playgenx-playground run build",
+    "build:packages": "pnpm -r --filter './packages/*' --workspace-concurrency=1 run build",
     "build:root": "tsdown",
     "dev": "pnpm -r --parallel --filter './packages/*' run build --watch",
     "dev:playground": "pnpm --filter playgenx-playground dev",

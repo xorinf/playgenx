@@ -1,6 +1,6 @@
 {
   "name": "playgenx",
-  "version": "0.2.1",
+  "version": "0.2.3",
   "description": "Open-source TypeScript SDK for generating interactive educational experiences from lecture context using LLMs.",
   "type": "module",
   "main": "./dist/index.mjs",
@@ -51,7 +51,7 @@
     "sourcemap": true,
     "clean": true,
     "deps": {
-      "alwaysBundle": ["@playgenx/parser", "@playgenx/prompts", "@playgenx/providers", "@playgenx/registry", "@playgenx/types", "@playgenx/validators"]
+      "alwaysBundle": ["^@playgenx/"]
     }
   }
 }
