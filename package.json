@@ -1,25 +1,13 @@
 {
-  "name": "playgenx",
-  "version": "0.1.0",
-  "description": "Open-source TypeScript SDK for generating interactive educational experiences from lecture context using LLMs.",
-  "type": "module",
+  "name": "playgenx-workspace",
+  "version": "0.0.0",
+  "description": "Root workspace for the playgenx monorepo. The published npm package is `playgenx` from packages/core.",
   "private": true,
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
-  },
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
   "scripts": {
-    "build": "pnpm -r --filter './packages/*' run build && pnpm --filter playgenx-playground run build",
-    "build:packages": "pnpm -r --filter './packages/*' run build",
+    "build": "pnpm -r --filter '@playgenx/*' --workspace-concurrency=1 run build && pnpm --filter playgenx run build && pnpm --filter playgenx-playground run build",
+    "build:packages": "pnpm -r --filter '@playgenx/*' --workspace-concurrency=1 run build && pnpm --filter playgenx run build",
+    "build:subpackages": "pnpm -r --filter '@playgenx/*' --workspace-concurrency=1 run build",
+    "build:core": "pnpm --filter playgenx run build",
     "build:root": "tsdown",
     "dev": "pnpm -r --parallel --filter './packages/*' run build --watch",
     "dev:playground": "pnpm --filter playgenx-playground dev",

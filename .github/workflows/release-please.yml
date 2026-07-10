@@ -30,11 +30,22 @@ jobs:
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
     steps:
+      - name: Skip if RELEASE_PLEASE_TOKEN is not configured
+        id: skip_check
+        run: |
+          if [ -z "${{ secrets.RELEASE_PLEASE_TOKEN }}" ]; then
+            echo "::warning::RELEASE_PLEASE_TOKEN secret is not set on this repo. Skipping release-please."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Checkout
+        if: steps.skip_check.outputs.skip != 'true'
         uses: actions/checkout@v7
 
       - name: Release Please
         id: release
+        if: steps.skip_check.outputs.skip != 'true'
         uses: googleapis/release-please-action@v5
         with:
           config-file: .release-please-config.json

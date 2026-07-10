@@ -32,5 +32,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Build the workspace packages in two phases so core can bundle
+      # sibling workspace deps: first build all @playgenx/* sub-packages,
+      # then build core (which is named `playgenx` at packages/core).
+      # Single-phase recursive builds race and leave core's bundle with
+      # unbundled external workspace deps. See PR #15 / v0.2.3 notes.
       - name: Verify (lint + build + test)
         run: pnpm run verify
