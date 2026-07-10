@@ -468,6 +468,55 @@ describe('error codes', () => {
     expect(r.error.code).toBe('PROVIDER_ERROR');
     expect(r.error.providerId).toBe('fail');
   });
+
+  it('sets TIMEOUT code (and does NOT retry) when our internal timeout fires', async () => {
+    let attempt = 0;
+    const timeoutProv: import('@playgenx/types').Provider = {
+      id: 'timeout',
+      defaultModel: 'timeout-1',
+      complete: async () => {
+        attempt++;
+        // Simulate our own AbortController firing. The error has
+        // name='AbortError' AND the __playgenxTimeout marker set.
+        const err: Error & { __playgenxTimeout?: boolean } = new Error('aborted');
+        err.name = 'AbortError';
+        err.__playgenxTimeout = true;
+        throw err;
+      },
+    };
+    const r = await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: timeoutProv, maxRetries: 3, retryBaseMs: 1 },
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.code).toBe('TIMEOUT');
+    // Crucially: only one attempt — internal timeouts are NOT retried.
+    expect(attempt).toBe(1);
+  });
+
+  it('DOES retry on a user-supplied AbortError (without the __playgenxTimeout marker)', async () => {
+    let attempt = 0;
+    const userAbort: import('@playgenx/types').Provider = {
+      id: 'user-abort',
+      defaultModel: 'user-abort-1',
+      complete: async () => {
+        attempt++;
+        // User-supplied AbortSignal: name='AbortError' but NO marker.
+        // The retry layer treats this as transient.
+        const err = new Error('aborted by user');
+        err.name = 'AbortError';
+        if (attempt < 2) throw err;
+        return '<Card />';
+      },
+    };
+    const r = await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: userAbort, maxRetries: 2, retryBaseMs: 1 },
+    );
+    expect(r.ok).toBe(true);
+    expect(attempt).toBe(2);
+  });
 });
 
 describe('truncation warning', () => {

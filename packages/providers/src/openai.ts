@@ -206,9 +206,16 @@ export class OpenAIProvider implements Provider {
     } catch (err) {
       if (timer !== null) clearTimeout(timer);
       if (err instanceof Error && err.name === 'AbortError') {
-        throw new OpenAIError(`OpenAI request timed out after ${timeoutMs}ms`, {
-          cause: err,
-        });
+        // Wrap the AbortError so the retry layer knows this came from
+        // OUR timeout, not a user-supplied AbortSignal. User aborts
+        // are transient; internal timeouts are not (a retry would just
+        // hit the same timeout).
+        const timeoutErr: Error & { __playgenxTimeout?: boolean } = new OpenAIError(
+          `OpenAI request timed out after ${timeoutMs}ms`,
+          { cause: err },
+        );
+        timeoutErr.__playgenxTimeout = true;
+        throw timeoutErr;
       }
       throw new OpenAIError('OpenAI request failed (network error)', { cause: err });
     }

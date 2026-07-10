@@ -14,7 +14,12 @@ const DEFAULT_MAX_RESPONSE_BYTES = 200_000; // 200 KB
  * What counts as a transient provider failure that should trigger an
  * automatic retry. A failure matching any of these gets retried with
  * exponential backoff up to `maxRetries` times. Permanent failures
- * (auth, malformed request, etc.) bubble up immediately.
+ * (auth, malformed request, hard timeout, etc.) bubble up immediately.
+ *
+ * Note: a hard timeout (our own AbortController fired because the
+ * request exceeded `timeoutMs`) is NOT treated as transient. The
+ * retry would just hit the same timeout. The caller can retry
+ * manually with a larger `timeoutMs`.
  */
 export function isTransientProviderError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
@@ -40,10 +45,26 @@ export function isTransientProviderError(err: unknown): boolean {
     if (status === 429) return true;
     if (status >= 500 && status < 600) return true;
   }
-  // AbortError from our own timeout — treated as transient (the user
-  // can just retry with a longer timeout).
-  if (err.name === 'AbortError') return true;
+  // AbortError from a user-provided AbortSignal IS transient (the user
+  // can retry once they un-abort). But our OWN timeout abort (which we
+  // identify by attaching a marker) is NOT.
+  if (err.name === 'AbortError' && !(err as Error & { __playgenxTimeout?: boolean }).__playgenxTimeout) {
+    return true;
+  }
   return false;
+}
+
+/**
+ * Mark an error as having come from our own timeout (not a user-supplied
+ * AbortSignal). Callers use the `__playgenxTimeout` flag to distinguish:
+ * user aborts are transient (they may un-abort and want us to retry);
+ * our internal timeouts are not.
+ */
+export function markAsTimeoutError(err: unknown): unknown {
+  if (err instanceof Error) {
+    (err as Error & { __playgenxTimeout?: boolean }).__playgenxTimeout = true;
+  }
+  return err;
 }
 
 const DEFAULT_BACKOFF_BASE_MS = 250;
@@ -176,7 +197,10 @@ async function runPipeline(
         kind: request.kind,
         providerId: options.provider.id,
         stage: 'provider',
-        code: lastErr && (lastErr as Error).name === 'AbortError' ? 'TIMEOUT' : 'PROVIDER_ERROR',
+        code:
+          lastErr && (lastErr as Error & { __playgenxTimeout?: boolean }).__playgenxTimeout
+            ? 'TIMEOUT'
+            : 'PROVIDER_ERROR',
         message: lastErr instanceof Error ? lastErr.message : String(lastErr),
       },
     };
@@ -277,6 +301,13 @@ function parseErrorCode(message: string): ArtifactErrorCode {
  * Map a validator-error message to a stable error code. Freeform
  * strings remain the source of truth for humans; the code is for
  * programmatic branching.
+ *
+ * Substring matching is avoided where possible to keep this mapping
+ * stable as new error messages are added. The forbidden-construct
+ * detection uses `.includes` because there are four near-identical
+ * messages (`` `eval(`is not allowed ``, `` `import`statements are not
+ * allowed ``, `` `new Function(`is not allowed ``, `` `require(`is not
+ * allowed ``); all share the FORBIDDEN_CONSTRUCT code.
  */
 function validatorErrorCode(message: string): ArtifactErrorCode {
   if (message.startsWith('Body is not valid JSON')) return 'JSON_PARSE_FAILED';
@@ -285,7 +316,7 @@ function validatorErrorCode(message: string): ArtifactErrorCode {
   if (
     message.includes('eval(') ||
     message.includes('new Function(') ||
-    message.includes('import') ||
+    message.includes('import statements are not allowed') ||
     message.includes('require(')
   ) {
     return 'FORBIDDEN_CONSTRUCT';

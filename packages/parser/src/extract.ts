@@ -77,9 +77,15 @@ const HTML_COMMENT_RE = /<!--[\s\S]*?-->/g;
 
 /**
  * Pre-process the raw LLM response before extraction:
- *   1. Strip a BOM.
- *   2. Strip thinking/reasoning blocks (the main fix).
+ *   1. Strip a leading BOM.
+ *   2. Strip thinking/reasoning blocks.
  *   3. Strip HTML/XML comments.
+ *
+ * Note: a fenced code block that happens to be inside a `<think>...</think>`
+ * block WILL be stripped along with the think block. If the model put its
+ * answer inside a think block, the stripper destroys the answer too.
+ * The model is expected to put the answer outside the think block; the
+ * stripper is a safety net, not a fence-aware parser.
  *
  * Returns the cleaned text. Line breaks are preserved so error messages can
  * still report accurate line numbers.
@@ -237,7 +243,7 @@ function findFence(
  * Extract a code artifact from a raw LLM response.
  *
  * Algorithm:
- * 1. Strip a leading BOM if present.
+ * 1. Strip a leading BOM and any thinking/reasoning blocks.
  * 2. Find the first ``` fence line. If found, find the next fence line
  *    after it. The body is everything between.
  * 3. If no fence, inspect the body shape.
