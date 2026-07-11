@@ -1,0 +1,80 @@
+{
+  "name": "@playgenx/renderer",
+  "version": "0.1.0",
+  "description": "Parse a TSX/HTML artifact body into a normalised tree and render it against a registry of React 19 components. Bridge between the SDK pipeline and the playground iframe.",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "lint": "eslint src",
+    "test": "vitest --run"
+  },
+  "tsdown": {
+    "entry": [
+      "src/index.ts"
+    ],
+    "format": [
+      "esm"
+    ],
+    "dts": true,
+    "sourcemap": true,
+    "clean": true,
+    "deps": {
+      "alwaysBundle": [
+        "^@playgenx/"
+      ]
+    }
+  },
+  "keywords": [
+    "playgenx",
+    "renderer",
+    "tsx"
+  ],
+  "author": "xorinf <118471720+xorinf@users.noreply.github.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xorinf/playgenx.git",
+    "directory": "packages/renderer"
+  },
+  "bugs": {
+    "url": "https://github.com/xorinf/playgenx/issues"
+  },
+  "homepage": "https://github.com/xorinf/playgenx/tree/main/packages/renderer",
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "dependencies": {
+    "@playgenx/registry": "workspace:*",
+    "@playgenx/types": "workspace:*",
+    "@playgenx/utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@playgenx/registry": "workspace:*",
+    "@playgenx/types": "workspace:*",
+    "@playgenx/utils": "workspace:*",
+    "@testing-library/react": "^16.2.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "jsdom": "^25.0.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tsdown": "^0.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
+  }
+}

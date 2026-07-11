@@ -11,6 +11,10 @@
     "lint": "eslint src --ext .ts,.tsx"
   },
   "dependencies": {
+    "@playgenx/components": "workspace:*",
+    "@playgenx/renderer": "workspace:*",
+    "@playgenx/storage": "workspace:*",
+    "@playgenx/storage-react": "workspace:*",
     "playgenx": "workspace:*",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"

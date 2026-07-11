@@ -4,7 +4,10 @@ import { OpenAIError, OpenAIProvider } from './openai.js';
 const originalFetch = globalThis.fetch;
 const originalEnv = process.env.OPENAI_API_KEY;
 
-function mockFetchOnce(body: unknown, init: { status?: number; ok?: boolean } = {}): ReturnType<typeof vi.fn> {
+function mockFetchOnce(
+  body: unknown,
+  init: { status?: number; ok?: boolean } = {},
+): ReturnType<typeof vi.fn> {
   const fn = vi.fn().mockResolvedValueOnce({
     ok: init.ok ?? (init.status === undefined || (init.status >= 200 && init.status < 300)),
     status: init.status ?? 200,
@@ -51,7 +54,7 @@ describe('OpenAIProvider', () => {
     mockFetchOnce({ choices: [{ message: { content: 'hello there' } }] });
     const provider = new OpenAIProvider();
     const result = await provider.complete('hi');
-    expect(result).toBe('hello there');
+    expect(result.body).toBe('hello there');
   });
 
   it('throws OpenAIError with status on 401 (no retry on auth error)', async () => {
@@ -84,7 +87,7 @@ describe('OpenAIProvider', () => {
     ]);
     const provider = new OpenAIProvider();
     const result = await provider.complete('hi');
-    expect(result).toBe('recovered');
+    expect(result.body).toBe('recovered');
   });
 
   it('retries on 500 and succeeds when later response is 200', async () => {
@@ -94,7 +97,7 @@ describe('OpenAIProvider', () => {
     ]);
     const provider = new OpenAIProvider();
     const result = await provider.complete('hi');
-    expect(result).toBe('recovered');
+    expect(result.body).toBe('recovered');
   });
 
   it('does NOT retry on 400 (client error)', async () => {
@@ -216,25 +219,23 @@ describe('OpenAIProvider', () => {
 
   it('appends a truncation marker when finish_reason is "length"', async () => {
     mockFetchOnce({
-      choices: [
-        { finish_reason: 'length', message: { content: 'partial answer' } },
-      ],
+      choices: [{ finish_reason: 'length', message: { content: 'partial answer' } }],
     });
     const provider = new OpenAIProvider();
     const result = await provider.complete('hi');
-    expect(result).toContain('partial answer');
-    expect(result).toContain('truncated by the model');
+    expect(result.body).toContain('partial answer');
+    expect(result.body).toContain('truncated by the model');
+    expect(result.finishReason).toBe('length');
   });
 
   it('returns content as-is when finish_reason is "stop"', async () => {
     mockFetchOnce({
-      choices: [
-        { finish_reason: 'stop', message: { content: 'full answer' } },
-      ],
+      choices: [{ finish_reason: 'stop', message: { content: 'full answer' } }],
     });
     const provider = new OpenAIProvider();
     const result = await provider.complete('hi');
-    expect(result).toBe('full answer');
+    expect(result.body).toBe('full answer');
+    expect(result.finishReason).toBe('stop');
   });
 
   it('maxRetries: 0 disables retries (single attempt)', async () => {

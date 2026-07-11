@@ -13,3 +13,5 @@ export type { Provider } from '@playgenx/types';
 export { MockProvider } from './mock.js';
 export { OpenAIProvider, OpenAIError } from './openai.js';
 export type { OpenAIProviderOptions } from './openai.js';
+export type { PricingRate } from './pricing.js';
+export { PRICING_TABLE, findPricing, computeCost, estimateCostFor } from './pricing.js';

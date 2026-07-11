@@ -13,7 +13,7 @@ function rawProvider(body: string): import('@playgenx/types').Provider {
   return {
     id: 'raw',
     defaultModel: 'raw-1',
-    complete: async () => body,
+    complete: async () => ({ body }),
   };
 }
 
@@ -145,8 +145,7 @@ describe('generateFlashcards', () => {
 
 describe('generateLab', () => {
   it('returns ok with kind="lab" for a TSX body', async () => {
-    const tsx =
-      '<Card><Heading>Lab: Binary Search</Heading><Button>Hint</Button></Card>';
+    const tsx = '<Card><Heading>Lab: Binary Search</Heading><Button>Hint</Button></Card>';
     const r = await generateLab(
       { context: 'ctx', concept: 'c', kind: 'lab' },
       { provider: rawProvider('```tsx\n' + tsx + '\n```') },

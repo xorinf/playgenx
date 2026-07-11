@@ -1,5 +1,12 @@
 import { BUILT_IN_TAGS, DEFAULT_REGISTRY, type Registry } from '@playgenx/registry';
-import { hasBalancedTags, lineOfFirst, stripCodeComments, tagNames } from '@playgenx/utils';
+import {
+  findNonDeterministic,
+  hasBalancedTags,
+  lineOfFirst,
+  propsOfTag,
+  stripCodeComments,
+  tagNames,
+} from '@playgenx/utils';
 import type { ValidateOptions, ValidationError } from './types.js';
 
 const BUILT_IN_SET = new Set(BUILT_IN_TAGS.map((t: string) => t.toLowerCase()));
@@ -89,7 +96,9 @@ const JSON_KIND_SHAPES: Readonly<Record<string, (parsed: unknown) => string | nu
         return `quiz question ${i} is missing ` + '`answer`' + ` (must be a non-empty string id)`;
       }
       if (!optionIds.has(qq.answer as string)) {
-        return `quiz question ${i}: ` + '`answer`' + ` ("${qq.answer}") doesn't match any option id`;
+        return (
+          `quiz question ${i}: ` + '`answer`' + ` ("${qq.answer}") doesn't match any option id`
+        );
       }
     }
     return null;
@@ -167,6 +176,29 @@ export function validate(
     };
   }
 
+  // 2b. No non-deterministic expressions. Only relevant for TSX
+  //     bodies; JSON-bodied kinds skip this entire function and run
+  //     the JSON shape check in `validateForKind` instead. Each
+  //     prohibited token is a JS reference whose value depends on
+  //     the moment of evaluation (Math.random, Date.now) or the
+  //     runtime environment (window, globalThis, process) — both
+  //     make a re-rendered artifact drift away from the original.
+  //     We reject the BARE identifier inside JS expression contexts
+  //     (`{...}` JSX expressions) and as standalone literals. To
+  //     avoid false positives on substrings inside attribute names
+  //     or string literals we strip strings + comments first.
+  //
+  //     Note: a future renderer could relax some of these if it
+  //     implements deterministic-output mode (frozen clock, seeded
+  //     PRNG). Until then, reject anything that would compromise it.
+  const nonDeterministic = findNonDeterministic(stripped);
+  if (nonDeterministic !== null) {
+    return {
+      message: `Non-deterministic expression \`${nonDeterministic}\` is not allowed in artifacts`,
+      line: lineOfFirst(stripped, nonDeterministic),
+    };
+  }
+
   // 3. Roughly balanced tags. Skipped for JSON-bodied kinds.
   if (!options.skipJsxCheck && !hasBalancedTags(body)) {
     return { message: 'Unbalanced JSX tags', line: 1 };
@@ -182,7 +214,70 @@ export function validate(
     };
   }
 
+  // 5. Optional prop-shape check. Only runs if the caller passed a
+  //    `schemas` option AND the tag is in the registry (i.e. it's a
+  //    known component, not a built-in HTML tag). Skipping for HTML
+  //    tags keeps the validator's stance: HTML attributes are
+  //    unrestricted by schema. The check confirms each prop the body
+  //    declares is in the schema, that required props are present,
+  //    and that the value's coarse kind matches the schema's spec.
+  if (options.schemas && options.schemas.length > 0) {
+    for (const schema of options.schemas) {
+      const props = propsOfTag(body, schema.name);
+      if (props.length === 0) continue;
+      const allowed = new Set(schema.props.map((p) => p.name));
+      const seen = new Set<string>();
+      for (const p of props) {
+        seen.add(p.name);
+        if (!allowed.has(p.name)) {
+          return {
+            message: `Unknown prop: <${schema.name} ${p.name}>. Allowed: ${Array.from(allowed).join(', ') || '(none)'}`,
+            line: lineOfFirst(body, `${p.name}=`),
+          };
+        }
+        const spec = schema.props.find((s) => s.name === p.name);
+        if (!spec) continue; // unreachable; defensive
+        if (!isCompatibleKind(spec.kind, p.kind)) {
+          return {
+            message: `Invalid prop \`${p.name}\` on <${schema.name}>: expected ${spec.kind}, got ${p.kind}`,
+            line: lineOfFirst(body, `${p.name}=`),
+          };
+        }
+      }
+      for (const spec of schema.props) {
+        if (spec.required && !seen.has(spec.name)) {
+          return {
+            message: `Missing required prop \`${spec.name}\` on <${schema.name}>`,
+            line: lineOfFirst(body, `<${schema.name}`),
+          };
+        }
+      }
+    }
+  }
+
   return null;
+}
+
+/**
+ * The validator's coarse-kind interpretation. `node` accepts any
+ * expression (because the renderer cannot predict whether a reference
+ * turns out to be a string, number, ReactNode, etc). `string` accepts
+ * a quoted literal in source. `number` accepts a number literal or a
+ * numeric-looking expression. `boolean` accepts `true`/`false` or a
+ * bare attribute (which is shorthand for `true`).
+ */
+function isCompatibleKind(schemaKind: string, exprKind: string): boolean {
+  if (schemaKind === 'node') return true;
+  if (schemaKind === exprKind) return true;
+  // Boolean shorthand: bare `<Button disabled />` is reported as kind
+  // 'boolean' with value 'true', which matches schemaKind 'boolean'.
+  if (schemaKind === 'boolean' && exprKind === 'expression') {
+    // Bare `disabled={false}` would be expression/false; allow only
+    // exact `true`/`false`. The classifier above already maps these
+    // to kind 'boolean'. Other expressions are unsafe.
+    return false;
+  }
+  return false;
 }
 
 /**

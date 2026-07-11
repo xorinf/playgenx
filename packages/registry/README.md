@@ -15,7 +15,7 @@ that allowlist.
   `Button, TextField, Slider, Chart, Container, Code, Heading, Text, Stepper, Card, List`
 - `BUILT_IN_TAGS` — the lowercase HTML tags the validator always allows:
   `div, span, p, h1-h6, ul, ol, li, code, pre, button, input, label, br, hr,
-  section, article, main, header, footer, nav`
+section, article, main, header, footer, nav`
 
 ## API
 
@@ -25,7 +25,7 @@ import { createRegistry, DEFAULT_REGISTRY } from '@playgenx/registry';
 const custom = createRegistry(['Button', 'MyWidget']);
 custom.add('Chart');
 
-custom.isAllowed('Chart');   // → true
+custom.isAllowed('Chart'); // → true
 custom.isAllowed('Unknown'); // → false
 
 // Pass to the validator to scope what you accept:

@@ -17,7 +17,7 @@ function rawProvider(body: string): import('@playgenx/types').Provider {
   return {
     id: 'raw',
     defaultModel: 'raw-1',
-    complete: async () => body,
+    complete: async () => ({ body }),
   };
 }
 
@@ -176,24 +176,22 @@ describe('generateQuiz', () => {
   });
 
   it('parseQuizBody returns typed value', () => {
+    // v0.4: parseQuizBody now resolves to the Zod-backed schema,
+    // which enforces .min(3) questions (the v0.3 regex trusted-cast
+    // didn't check this — it deferred to validateForKind). Pass 3
+    // questions to satisfy the contract.
     const r = parseQuizBody(
       JSON.stringify({
         questions: [
-          {
-            id: 'q1',
-            prompt: 'p',
-            options: [
-              { id: 'a', label: 'A' },
-              { id: 'b', label: 'B' },
-            ],
-            answer: 'a',
-          },
+          { id: 'q1', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'a' },
+          { id: 'q2', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'b' },
+          { id: 'q3', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'a' },
         ],
       }),
     );
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.value.questions).toHaveLength(1);
+    expect(r.value.questions).toHaveLength(3);
   });
 });
 
@@ -246,8 +244,7 @@ describe('generateFlashcards', () => {
 
 describe('generateLab', () => {
   it('returns ok for valid lab TSX', async () => {
-    const tsx =
-      '<Card><Heading>Lab: Binary Search</Heading><Button>Hint</Button></Card>';
+    const tsx = '<Card><Heading>Lab: Binary Search</Heading><Button>Hint</Button></Card>';
     const r = await generateLab(
       { context: 'ctx', concept: 'c', kind: 'lab' },
       { provider: rawProvider('```tsx\n' + tsx + '\n```') },
@@ -309,7 +306,7 @@ describe('retry on transient provider failures', () => {
           e.code = 'ECONNRESET';
           throw e;
         }
-        return '<Card><Text>ok</Text></Card>';
+        return { body: '<Card><Text>ok</Text></Card>' };
       },
     };
     const r = await generatePlayground(
@@ -342,7 +339,11 @@ describe('retry on transient provider failures', () => {
     expect(attempt).toBe(1);
   });
 
-  it('returns RETRIES_EXHAUSTED after exhausting retries on persistent failures', async () => {
+  it('returns RETRIES_EXHAUSTED after exhausting retries on persistent transient failures', async () => {
+    // The pipeline distinguishes "we retried N times and gave up"
+    // (RETRIES_EXHAUSTED) from "the provider told us no" (PROVIDER_ERROR).
+    // A persistent 503 is transient, so we retry until exhausted and
+    // then surface RETRIES_EXHAUSTED.
     const alwaysFail: import('@playgenx/types').Provider = {
       id: 'always',
       defaultModel: 'always-1',
@@ -354,7 +355,29 @@ describe('retry on transient provider failures', () => {
     };
     const r = await generatePlayground(
       { context: 'ctx', concept: 'c', kind: 'playground' },
-      { provider: alwaysFail, maxRetries: 2, retryBaseMs: 1 }, // tiny base to keep test fast
+      { provider: alwaysFail, maxRetries: 2, retryBaseMs: 1 },
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.code).toBe('RETRIES_EXHAUSTED');
+  });
+
+  it('returns PROVIDER_ERROR for permanent failures (no retry)', async () => {
+    // A 400 (client error) is permanent — we don't retry, we surface
+    // PROVIDER_ERROR immediately. RETRIES_EXHAUSTED only fires when we
+    // actually retried.
+    const alwaysFail: import('@playgenx/types').Provider = {
+      id: 'always',
+      defaultModel: 'always-1',
+      complete: async () => {
+        const e: Error & { status?: number } = new Error('Bad request');
+        e.status = 400;
+        throw e;
+      },
+    };
+    const r = await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: alwaysFail, maxRetries: 2, retryBaseMs: 1 },
     );
     expect(r.ok).toBe(false);
     if (r.ok) return;
@@ -507,7 +530,7 @@ describe('error codes', () => {
         const err = new Error('aborted by user');
         err.name = 'AbortError';
         if (attempt < 2) throw err;
-        return '<Card />';
+        return { body: '<Card />' };
       },
     };
     const r = await generatePlayground(
@@ -554,7 +577,7 @@ describe('provider options passthrough', () => {
           timeoutMs: opts?.timeoutMs,
           model: opts?.model,
         };
-        return '<Card />';
+        return { body: '<Card />' };
       },
     };
     await generatePlayground(
@@ -573,7 +596,7 @@ describe('provider options passthrough', () => {
       defaultModel: 'cap-1',
       complete: async (_prompt, opts) => {
         captured = { maxTokens: opts?.maxTokens };
-        return '<Card />';
+        return { body: '<Card />' };
       },
     };
     await generatePlayground(
@@ -581,5 +604,276 @@ describe('provider options passthrough', () => {
       { provider: capturing },
     );
     expect(captured.maxTokens).toBeUndefined();
+  });
+});
+
+// Determinism-fingerprint contract: PR 2 attached `id` and
+// `promptFingerprint` to every successful artifact. These tests
+// pin the shape so a future refactor doesn't silently drop them.
+describe('Determinism fingerprints on generated artifacts', () => {
+  function rawProvider(body: string): import('@playgenx/types').Provider {
+    return {
+      id: 'raw',
+      defaultModel: 'raw-1',
+      complete: async () => ({ body }),
+    };
+  }
+
+  it('attaches a 64-hex-char id to every successful playground artifact', async () => {
+    const r = await generatePlayground(
+      { context: 'x', concept: 'y', kind: 'playground' },
+      { provider: rawProvider('<Card />') },
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.artifact.id).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('attaches a 64-hex-char promptFingerprint', async () => {
+    const r = await generatePlayground(
+      { context: 'x', concept: 'y', kind: 'playground' },
+      { provider: rawProvider('<Card />') },
+    );
+    if (!r.ok) return;
+    expect(r.artifact.promptFingerprint).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('id is stable for the same body+provider (re-rendered)', async () => {
+    const a = await generatePlayground(
+      { context: 'x', concept: 'y', kind: 'playground' },
+      { provider: rawProvider('<Card />') },
+    );
+    const b = await generatePlayground(
+      { context: 'x', concept: 'y', kind: 'playground' },
+      { provider: rawProvider('<Card />') },
+    );
+    if (!a.ok || !b.ok) return;
+    expect(a.artifact.id).toBe(b.artifact.id);
+  });
+
+  it('id changes when the body changes', async () => {
+    const a = await generatePlayground(
+      { context: 'x', concept: 'y', kind: 'playground' },
+      { provider: rawProvider('<Card />') },
+    );
+    const b = await generatePlayground(
+      { context: 'x', concept: 'y', kind: 'playground' },
+      { provider: rawProvider('<Text />') },
+    );
+    if (!a.ok || !b.ok) return;
+    expect(a.artifact.id).not.toBe(b.artifact.id);
+  });
+
+  it('promptFingerprint changes when the concept changes (cache key for repeat calls)', async () => {
+    const a = await generatePlayground(
+      { context: 'x', concept: 'y', kind: 'playground' },
+      { provider: rawProvider('<Card />') },
+    );
+    const b = await generatePlayground(
+      { context: 'x', concept: 'z', kind: 'playground' },
+      { provider: rawProvider('<Card />') },
+    );
+    if (!a.ok || !b.ok) return;
+    expect(a.artifact.promptFingerprint).not.toBe(b.artifact.promptFingerprint);
+  });
+
+  it('promptFingerprint is stable for the same request inputs', async () => {
+    const a = await generatePlayground(
+      { context: 'x', concept: 'y', kind: 'playground' },
+      { provider: rawProvider('<Card />') },
+    );
+    const b = await generatePlayground(
+      { context: 'x', concept: 'y', kind: 'playground' },
+      { provider: rawProvider('<Card />') },
+    );
+    if (!a.ok || !b.ok) return;
+    expect(a.artifact.promptFingerprint).toBe(b.artifact.promptFingerprint);
+  });
+
+  it('does NOT attach fingerprints when the validator rejects the body', async () => {
+    const r = await generatePlayground(
+      { context: 'x', concept: 'y', kind: 'playground' },
+      { provider: rawProvider('<Button onClick={() => Math.random()} />') },
+    );
+    expect(r.ok).toBe(false);
+  });
+
+  it('attaches fingerprints for JSON-bodied kinds (poll) too', async () => {
+    const json = JSON.stringify({
+      question: 'q',
+      options: [
+        { id: 'a', label: 'A' },
+        { id: 'b', label: 'B' },
+      ],
+    });
+    const r = await generatePoll(
+      { context: 'x', concept: 'y', kind: 'poll' },
+      { provider: rawProvider('```json\n' + json + '\n```') },
+    );
+    if (!r.ok) return;
+    expect(r.artifact.id).toMatch(/^[0-9a-f]{64}$/);
+    expect(r.artifact.promptFingerprint).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+// ============================================================================
+// v0.4 tests: OTel instrumentation, retry-with-correction, usage / costUsd.
+// ============================================================================
+
+describe('OpenTelemetry instrumentation (v0.4)', () => {
+  it('emits a gen_ai.chat span with model and provider attributes', async () => {
+    const { _resetTracerCache } = await import('@playgenx/observability');
+    _resetTracerCache();
+    const spans: Array<{ name: string; attrs: Record<string, unknown> }> = [];
+    const mockTracer = {
+      startSpan: (name: string, opts?: { attributes?: Record<string, unknown> }) => {
+        const span = {
+          attrs: opts?.attributes ?? {},
+          end: () => {
+            spans.push({ name, attrs: span.attrs });
+          },
+          setStatus: () => {},
+          recordException: () => {},
+        };
+        return span;
+      },
+    };
+    const { setTracer } = await import('@playgenx/observability');
+    setTracer(mockTracer);
+    try {
+      await generatePlayground(
+        { context: 'ctx', concept: 'c', kind: 'playground' },
+        { provider: rawProvider('<div />') },
+      );
+    } finally {
+      setTracer(null);
+    }
+    const chatSpans = spans.filter((s) => s.name === 'gen_ai.chat');
+    expect(chatSpans.length).toBeGreaterThan(0);
+    const last = chatSpans[chatSpans.length - 1]!;
+    expect(last.attrs['gen_ai.system']).toBe('raw');
+    expect(last.attrs['gen_ai.request.model']).toBe('raw-1');
+  });
+
+  it('falls back to no-op spans when no tracer is registered', async () => {
+    const observability = await import('@playgenx/observability');
+    observability._resetTracerCache();
+    observability.setTracer(null);
+    const r = await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: rawProvider('<Card />') },
+    );
+    expect(r.ok).toBe(true);
+    expect(observability.NOOP_SPAN).toBeDefined();
+  });
+});
+
+describe('Auto-retry with validator correction (v0.4)', () => {
+  it('retries once when the validator rejects the first response', async () => {
+    let calls = 0;
+    const provider = {
+      id: 'mock-flaky',
+      defaultModel: 'mock-1',
+      async complete(_prompt: string) {
+        calls++;
+        if (calls === 1) {
+          // First response violates the validator — uses Math.random.
+          return { body: '<Button onClick={() => Math.random()} />' };
+        }
+        // Second response is clean.
+        return { body: '<Button label="x" />' };
+      },
+    };
+    const r = await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: provider as unknown as import('@playgenx/types').Provider },
+    );
+    expect(r.ok).toBe(true);
+    expect(calls).toBe(2); // exactly one retry
+  });
+
+  it('does not retry if maxValidationRetries is 0', async () => {
+    let calls = 0;
+    const provider = {
+      id: 'mock',
+      defaultModel: 'mock-1',
+      async complete(_prompt: string) {
+        calls++;
+        return { body: '<Button onClick={() => Math.random()} />' };
+      },
+    };
+    const r = await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      {
+        provider: provider as unknown as import('@playgenx/types').Provider,
+        maxValidationRetries: 0,
+      },
+    );
+    expect(r.ok).toBe(false);
+    expect(calls).toBe(1);
+  });
+});
+
+describe('Usage + costUsd (v0.4)', () => {
+  it('attaches usage when the provider returns it in the ProviderResult', async () => {
+    const provider = {
+      id: 'mock-usage',
+      defaultModel: 'gpt-4o-mini',
+      async complete(_prompt: string) {
+        return { body: '<Card />', usage: { inputTokens: 1000, outputTokens: 500 } };
+      },
+    };
+    const r = await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: provider as unknown as import('@playgenx/types').Provider },
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.artifact.usage).toEqual({ inputTokens: 1000, outputTokens: 500 });
+    // gpt-4o-mini: 0.00015 input / 0.0006 output per 1k. 1.0*0.00015 + 0.5*0.0006 = 0.00045
+    expect(r.artifact.costUsd).toBeCloseTo(0.00045, 6);
+  });
+
+  it('omits costUsd when no pricing row matches the model', async () => {
+    const provider = {
+      id: 'mock-unknown-model',
+      defaultModel: 'unknown-model-2026',
+      async complete(_prompt: string) {
+        return { body: '<Card />', usage: { inputTokens: 1000, outputTokens: 500 } };
+      },
+    };
+    const r = await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: provider as unknown as import('@playgenx/types').Provider },
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.artifact.usage).toEqual({ inputTokens: 1000, outputTokens: 500 });
+    expect(r.artifact.costUsd).toBeUndefined();
+  });
+
+  it('threads usage through parser mutation (fenced body case)', async () => {
+    // Regression: the previous side-channel implementation looked up
+    // usage by the raw response body, which silently failed whenever
+    // the parser trimmed or otherwise mutated the body (the canonical
+    // fenced-code-block case). Now usage is part of ProviderResult,
+    // so it survives regardless of what the parser does.
+    const provider = {
+      id: 'mock-fenced',
+      defaultModel: 'gpt-4o-mini',
+      async complete(_prompt: string) {
+        return {
+          body: 'Here is your card:\n```tsx\n<Card />\n```\nDone.',
+          usage: { inputTokens: 50, outputTokens: 12 },
+        };
+      },
+    };
+    const r = await generatePlayground(
+      { context: 'ctx', concept: 'c', kind: 'playground' },
+      { provider: provider as unknown as import('@playgenx/types').Provider },
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.artifact.usage).toEqual({ inputTokens: 50, outputTokens: 12 });
+    expect(r.artifact.body).toBe('<Card />');
   });
 });

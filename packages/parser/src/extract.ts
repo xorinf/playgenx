@@ -66,9 +66,7 @@ function buildThinkingTagStripper(): RegExp {
   // Build `<think>[\s\S]*?</think>|<thinking>...</thinking>|...` from the
   // THINKING_TAGS list. Case-insensitive flag is applied to the assembled
   // regex.
-  const alternatives = THINKING_TAGS.map(
-    (tag) => `<${tag}>[\\s\\S]*?<\\/${tag}>`,
-  ).join('|');
+  const alternatives = THINKING_TAGS.map((tag) => `<${tag}>[\\s\\S]*?<\\/${tag}>`).join('|');
   return new RegExp(alternatives, 'gi');
 }
 
@@ -143,7 +141,10 @@ function lineOf(text: string, index: number): number {
  *
  * Stops at the first non-tag character (whitespace, newline, etc).
  */
-function readTag(text: string, afterBackticks: number): {
+function readTag(
+  text: string,
+  afterBackticks: number,
+): {
   tag: string | undefined;
   nextIndex: number;
 } {
@@ -157,7 +158,7 @@ function readTag(text: string, afterBackticks: number): {
       (ch >= 48 && ch <= 57) || // 0-9
       ch === 43 || // +
       ch === 45 || // -
-      ch === 95    // _
+      ch === 95 // _
     ) {
       tag += text[i];
       i++;
@@ -197,7 +198,12 @@ function findFence(
     let marker: string | null = null;
     if (ch === 96 /* ` */ && i + 2 < text.length && text[i + 1] === '`' && text[i + 2] === '`') {
       marker = '```';
-    } else if (ch === 126 /* ~ */ && i + 2 < text.length && text[i + 1] === '~' && text[i + 2] === '~') {
+    } else if (
+      ch === 126 /* ~ */ &&
+      i + 2 < text.length &&
+      text[i + 1] === '~' &&
+      text[i + 2] === '~'
+    ) {
       marker = '~~~';
     }
 
@@ -270,9 +276,7 @@ export function extractArtifact(raw: string): ExtractResult {
     }
     // Body is from afterIndex to close.index, with leading/trailing
     // newlines and carriage returns trimmed (but not interior whitespace).
-    const body = text
-      .slice(open.afterIndex, close.index)
-      .replace(/^[\r\n]+|[\r\n]+$/g, '');
+    const body = text.slice(open.afterIndex, close.index).replace(/^[\r\n]+|[\r\n]+$/g, '');
     // An empty body inside a fenced block is almost always a model bug —
     // either the model emitted ````\n```\n```` with nothing in between,
     // or the only content was a thinking block that we stripped. Surface

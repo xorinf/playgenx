@@ -29,7 +29,7 @@ Real AST-based validation lands in 0.2.0 (likely via `acorn` or
 import { validate } from '@playgenx/validators';
 import { createRegistry } from '@playgenx/registry';
 
-const result = validate(parsedBody);                       // uses DEFAULT_REGISTRY
+const result = validate(parsedBody); // uses DEFAULT_REGISTRY
 const custom = validate(parsedBody, createRegistry(['Foo'])); // custom allowlist
 
 if (result === null) {
@@ -41,7 +41,7 @@ if (result === null) {
 
 ## Trust model
 
-PlayGenX is a generator of *content*. The validator checks content for
+PlayGenX is a generator of _content_. The validator checks content for
 clearly-forbidden constructs and unknown component names. It is not a
 security boundary against a determined attacker — for that, render
 artifacts in a sandboxed context and treat the result as untrusted.

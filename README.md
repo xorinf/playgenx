@@ -30,7 +30,7 @@ const result = await generatePlayground(
 );
 
 if (result.ok) {
-  console.log(result.artifact.body);   // clean, validated TSX
+  console.log(result.artifact.body); // clean, validated TSX
 } else {
   console.error(result.error.stage, result.error.message);
 }
@@ -38,10 +38,16 @@ if (result.ok) {
 
 ## Status
 
-**v0.1.0 — MVP.** One real provider (OpenAI), a full parse → validate
-pipeline, a local playground app, full docs. See
-[`CHANGELOG.md`](./CHANGELOG.md) and the [roadmap](./docs/roadmap.md) for
-what's next and what we deliberately left out.
+**v0.4.0 — production-ready.** Adds optional OpenTelemetry
+instrumentation (`@playgenx/observability`), a token-usage /
+pricing surface on every artifact, a Zod-backed body-parser with
+graceful fallback when Zod isn't installed, byte-aware response
+truncation, and a provider-contract migration that fixes a silent
+token-usage drop in the v0.3.x side-channel implementation. 390
+tests pass across 11 packages. See [`CHANGELOG.md`](./CHANGELOG.md)
+for the full set of changes, including the two breaking changes
+that affect third-party `Provider` implementations and the JSON
+parser behavior.
 
 ## Quickstart (offline, no API key)
 
@@ -82,14 +88,14 @@ pass it explicitly: `new OpenAIProvider({ apiKey: 'sk-…' })`. See
 
 ## Supported artifact kinds
 
-| Kind          | Status | Body shape                                              |
-| ------------- | :----: | ------------------------------------------------------- |
-| `playground`  |   ✅   | TSX/HTML — a self-contained interactive component.       |
-| `poll`        |   ✅   | JSON — a single multiple-choice question with 2–4 options. |
-| `quiz`        |   ✅   | JSON — 3–8 questions, each with options and an answer.  |
-| `simulation`  |   ✅   | TSX/HTML — interactive component with state and progression. |
-| `flashcards`  |   ✅   | JSON — 5–20 cards, each with a front and back.          |
-| `lab`         |   ✅   | TSX/HTML — multi-step guided exploration with hints.    |
+| Kind         | Status | Body shape                                                   |
+| ------------ | :----: | ------------------------------------------------------------ |
+| `playground` |   ✅   | TSX/HTML — a self-contained interactive component.           |
+| `poll`       |   ✅   | JSON — a single multiple-choice question with 2–4 options.   |
+| `quiz`       |   ✅   | JSON — 3–8 questions, each with options and an answer.       |
+| `simulation` |   ✅   | TSX/HTML — interactive component with state and progression. |
+| `flashcards` |   ✅   | JSON — 5–20 cards, each with a front and back.               |
+| `lab`        |   ✅   | TSX/HTML — multi-step guided exploration with hints.         |
 
 All kinds ship in 0.2.0. Generate with `generatePlayground`, `generatePoll`,
 `generateQuiz`, `generateSimulation`, `generateFlashcards`, or `generateLab`.
@@ -112,17 +118,17 @@ validators do no IO and have no env access. See
 
 ## Packages
 
-| Package                                | Role                              | Status |
-| -------------------------------------- | --------------------------------- | ------ |
-| [`playgenx`](./packages/core)        | Public SDK entry. Re-exports everything. | ✅ 0.1.0 |
-| [`@playgenx/providers`](./packages/providers) | Mock + OpenAI provider implementations. | ✅ 0.1.0 |
-| [`@playgenx/prompts`](./packages/prompts)     | Prompt templates.                 | ✅ 0.1.0 |
-| [`@playgenx/parser`](./packages/parser)       | LLM response → kinded body.       | ✅ 0.1.0 |
-| [`@playgenx/validators`](./packages/validators) | Substring + tag balance + allowlist. | ✅ 0.1.0 |
-| [`@playgenx/registry`](./packages/registry)   | Component allowlist.              | ✅ 0.1.0 |
-| [`@playgenx/utils`](./packages/utils)         | Shared string helpers.            | ✅ 0.1.0 |
-| [`@playgenx/types`](./packages/types)         | Shared TS types.                  | ✅ 0.1.0 |
-| [`apps/playground`](./apps/playground)        | Vite + React local-dev UI.        | ✅ 0.1.0 |
+| Package                                         | Role                                     | Status   |
+| ----------------------------------------------- | ---------------------------------------- | -------- |
+| [`playgenx`](./packages/core)                   | Public SDK entry. Re-exports everything. | ✅ 0.1.0 |
+| [`@playgenx/providers`](./packages/providers)   | Mock + OpenAI provider implementations.  | ✅ 0.1.0 |
+| [`@playgenx/prompts`](./packages/prompts)       | Prompt templates.                        | ✅ 0.1.0 |
+| [`@playgenx/parser`](./packages/parser)         | LLM response → kinded body.              | ✅ 0.1.0 |
+| [`@playgenx/validators`](./packages/validators) | Substring + tag balance + allowlist.     | ✅ 0.1.0 |
+| [`@playgenx/registry`](./packages/registry)     | Component allowlist.                     | ✅ 0.1.0 |
+| [`@playgenx/utils`](./packages/utils)           | Shared string helpers.                   | ✅ 0.1.0 |
+| [`@playgenx/types`](./packages/types)           | Shared TS types.                         | ✅ 0.1.0 |
+| [`apps/playground`](./apps/playground)          | Vite + React local-dev UI.               | ✅ 0.1.0 |
 
 > `playgenx` is the only published npm package. All others are
 > private workspace deps, re-exported through core. One published surface,

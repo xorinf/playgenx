@@ -271,14 +271,7 @@ describe('extractArtifact', () => {
     });
 
     it('strips <thinking>, <thought>, <reasoning>, <reflection>, <scratchpad>, <analysis>', () => {
-      const tags = [
-        'thinking',
-        'thought',
-        'reasoning',
-        'reflection',
-        'scratchpad',
-        'analysis',
-      ];
+      const tags = ['thinking', 'thought', 'reasoning', 'reflection', 'scratchpad', 'analysis'];
       for (const tag of tags) {
         const raw = `<${tag}>scratch</${tag}>\n\`\`\`tsx\nbody\n\`\`\``;
         const result = extractArtifact(raw);

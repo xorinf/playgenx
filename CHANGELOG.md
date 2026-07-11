@@ -48,7 +48,7 @@ conventional commit messages. The v0.1.0 entry below is hand-written.
   balance, no real AST). Treat validator-passing output as untrusted and
   render in a sandbox.
 - The validator rejects `eval(`, `new Function(`, `import` statements, and
-  `require(`. These checks are *defense in depth*, not a security
+  `require(`. These checks are _defense in depth_, not a security
   boundary.
 - Only `playground` is wired end-to-end. `poll`, `quiz`, `simulation`,
   `flashcards`, and `lab` are reserved names that ship in 0.1.1.
@@ -128,7 +128,7 @@ conventional commit messages. The v0.1.0 entry below is hand-written.
 - Five new prompt templates in `@playgenx/prompts`:
   `pollPrompt`, `quizPrompt`, `simulationPrompt`, `flashcardsPrompt`,
   `labPrompt`. Each is a pure function with the same `(request) =>
-  string` shape as the existing `playgroundPrompt`.
+string` shape as the existing `playgroundPrompt`.
 
 ### Changed
 
@@ -152,6 +152,128 @@ conventional commit messages. The v0.1.0 entry below is hand-written.
   sandboxed iframe.
 
 [0.2.0]: https://github.com/xorinf/playgenx/releases/tag/v0.2.0
+
+## [0.4.0] — 2026-07-11
+
+Release-please generated these notes from the v0.2.1 → v0.4.0
+conventional-commit history. (The v0.2.2, v0.2.3, v0.3.0, and v0.3.1
+intermediate releases were tagged on npm but their CHANGELOG
+entries were not preserved; their changes are reflected in this
+entry for completeness.)
+
+### Breaking changes
+
+- **`Provider.complete()` return type changed from `Promise<string>`
+  to `Promise<ProviderResult>`.** `ProviderResult` is
+  `{ body: string; usage?: TokenUsage; finishReason?: string }`.
+  Third-party `Provider` implementations must wrap their body in
+  `{ body }` — TypeScript will fail compilation for the old
+  `Promise<string>` shape, making the migration loud. Built-in
+  providers (`MockProvider`, `OpenAIProvider`) are updated.
+
+  Why: the previous design carried token usage through a
+  process-global `Map<string, TokenUsage>` keyed by the raw
+  response body. That silently dropped usage whenever the parser or
+  truncation step mutated the body — the canonical fenced-code-block
+  case (where `extractArtifact` strips fences, so `currentBody` no
+  longer equals the provider's string). Returning the metadata
+  alongside the body is immutable, side-effect-free, and traceable.
+
+- **The v0.4-rc aliases are gone.** `parsePollBodyV04`,
+  `parseQuizBodyV04`, `parseFlashcardsBodyV04`, and `ParseResultV04`
+  no longer exist. `parsePollBody` / `parseQuizBody` /
+  `parseFlashcardsBody` now resolve to the Zod-backed parsers
+  shipped in `body-schemas.ts`, which fall back to the trusted-shape
+  cast when `zod` is not installed. The return shape
+  (`{ ok, value } | { ok, error }`) is unchanged from v0.3.x.
+
+- **`parsePollBody` / `parseQuizBody` / `parseFlashcardsBody`
+  enforce schema strictly now.** Previously these deferred entirely
+  to `validateForKind` and would crash on invalid input. Now they
+  return `{ ok: false, error: "...message..." }` for out-of-spec
+  bodies (e.g., a quiz with fewer than 3 questions). Defense in
+  depth — pre-v0.4 callers passing lax inputs will see different
+  errors.
+
+### Added
+
+- **Token usage on the artifact.** `Artifact.usage?: TokenUsage`
+  is populated when the provider returns it (OpenAI does via
+  `chat.completions` `usage`; Anthropic, Gemini will). Combined with
+  the pricing table below, callers can compute dollar cost per
+  generation without depending on `@playgenx/providers`.
+
+- **`Artifact.costUsd?: number`** is populated when the model has a
+  row in the pricing table and the provider returned usage. When the
+  table has no entry (custom model, ollama, etc.) `costUsd` is
+  omitted — caller's UI knows to show "usage only" without inventing
+  a fake price.
+
+- **Pricing table** in `@playgenx/providers/src/pricing.ts`. Single
+  source of truth for USD-per-1K-token rates: `PRICING_TABLE`,
+  `findPricing(model)`, `computeCost(usage, rate)`,
+  `estimateCostFor(model, usage)`. Today only OpenAI rows are
+  populated (no Anthropic provider implementation yet — see v0.5.0
+  roadmap).
+
+- **New package `@playgenx/observability`.** Optional OpenTelemetry
+  instrumentation. Consumers register a tracer provider once at
+  startup; when set, every `Provider.complete()` call wraps in a
+  `gen_ai.chat` span and `extractArtifact()` plus `validate()` run
+  as child spans. When no provider is set, the SDK keeps zero
+  overhead and no spans are produced. `@opentelemetry/api` is an
+  optional peer dep — the package builds and runs without it.
+
+- **Auto-retry on validator rejection.** When the validator returns
+  an error and `maxValidationRetries > 0` (default 1), the pipeline
+  re-calls the provider once with the validator's message appended
+  to the prompt. Turn it off with `maxValidationRetries: 0`.
+  Re-exported at `@playgenx/core` via `GenerateOptions`.
+
+### Fixed (production-readiness fixes from the v0.4 audit)
+
+- **Byte-aware `maxResponseBytes` cap.** The gate now uses
+  `utf8ByteLength(raw)` instead of `raw.length`. Emoji and other
+  supplementary-plane characters no longer trigger spurious
+  truncation. The inner `truncateWithFenceAwareness` still slices
+  in code units (documented approximation) — the outer byte-length
+  check is the gate.
+
+- **OTel span-message clamp at 4 KB** with a `[truncated]` marker.
+  Model error messages can be unboundedly long; OTLP / Jaeger
+  exporters reject oversized attribute values. The full original
+  message is preserved in `ArtifactError.message` for the caller.
+
+- **`RETRIES_EXHAUSTED` is now emitted.** Previously the type union
+  declared it but the pipeline never actually emitted it — all
+  transient-exhaustion failures fell through to `PROVIDER_ERROR`,
+  silently breaking callers that switched on `code`. Now
+  `RETRIES_EXHAUSTED` fires when the last error was transient and
+  we hit the retry cap; `PROVIDER_ERROR` for permanent failures
+  (no retry).
+
+- **Type-helper `Infer<T>`** in `body-schemas.ts` now resolves to
+  the concrete body type (`Poll`, `Quiz`, `{ cards: Flashcard[] }`)
+  for the wrapper schemas. Previous implementation resolved to
+  `never` in those cases (works through a different `z.infer`-style
+  type expression now).
+
+### Notes
+
+- Third-party `Provider` implementations: update your `complete()` to
+  return `Promise<ProviderResult>`. Most providers can simply wrap
+  the existing string: `return { body };`.
+- `@playgenx/observability` is optional. Install it
+  (`npm install @playgenx/observability @opentelemetry/api`) only if
+  you want spans exported to your observability backend.
+- 390 tests pass on this release (up from 174 in v0.2.1). 0 lint
+  errors. 0 build errors.
+- Two uncommitted helper APIs were added: `utf8ByteLength` in
+  `@playgenx/utils` (UTF-8 byte counter) and the
+  `_resetTracerCache` symbol exported by `@playgenx/observability`
+  (test-only, underscore-prefixed convention).
+
+[0.4.0]: https://github.com/xorinf/playgenx/releases/tag/v0.4.0
 
 ## [0.2.1] — 2026-07-09
 
@@ -186,7 +308,7 @@ conventional commit messages. The v0.1.0 entry below is hand-written.
   body when `finish_reason === 'length'`. 12 new tests.
 - **Core pipeline** (`@playgenx/core`): `maxResponseBytes` option
   caps runaway responses with fence-aware truncation (preserves
-  ```` ```...``` ```` structure; the truncation marker is placed INSIDE
+  ` ```...``` ` structure; the truncation marker is placed INSIDE
   the fence so the parser keeps it). 3 new body parsers
   (`parsePollBody`, `parseQuizBody`, `parseFlashcardsBody`) return
   typed `ParseResult<T>` for the JSON-bodied kinds.
@@ -198,6 +320,6 @@ conventional commit messages. The v0.1.0 entry below is hand-written.
   `validateForKind` automatically so the new JSON shape checks apply
   to all 6 generateX functions without any caller changes.
 - The validator's checks are still lightweight (substring + tag balance
-  + tag names). A real AST-based validator remains on the 0.3.0 roadmap.
+  - tag names). A real AST-based validator remains on the 0.3.0 roadmap.
 
 [0.2.1]: https://github.com/xorinf/playgenx/releases/tag/v0.2.1
