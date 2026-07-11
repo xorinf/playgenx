@@ -239,6 +239,46 @@ string` shape as the existing `playgroundPrompt`.
   re-exports in development but production deploys need the scoped
   packages on npm.
 
+## [0.5.0] — 2026-07-11 (simplified)
+
+v0.5.0 is a stability cut. The umbrella `playgenx` is a
+self-contained SDK with no React peer dependencies and no scoped
+org requirement. The 3 React-flavored packages
+(`@playgenx/renderer`, `@playgenx/components`,
+`@playgenx/storage-react`) remain in the monorepo and are used by
+`apps/playground` directly; they will be published under the
+`@playgenx` npm org when the org exists (v0.5.1).
+
+### Internal
+
+- The umbrella `playgenx` no longer declares React or any
+  `@playgenx/*` scoped package as a peer dependency. `npm install
+  playgenx@0.5.0` succeeds with zero peer-dep warnings; no org
+  on the npm registry is required.
+- `dist-self-contained` test restored to its v0.4 form (any
+  external `@playgenx/*` import in the umbrella dist is a
+  failure; the v0.5 whitelist is gone). The 0.5.0 umbrella
+  bundle is self-contained, ~195 KB unpacked, no React.
+- A previous `playgenx@0.5.0` was briefly published then
+  unpublished (within the 72h window) because it required the
+  `@playgenx` npm org to exist for its 3 scoped package peer
+  deps. The org cannot be created via CLI; it requires a web
+  step at npmjs.com. The current v0.5.0 supersedes that and
+  removes the requirement.
+
+### Migration from v0.4.0
+
+No migration steps for backend consumers. `npm install
+playgenx@0.5.0` works the same as v0.4.0. The umbrella dist
+is ~195 KB unpacked (was 195 KB in v0.4.0); total installed
+size is essentially identical.
+
+The renderer v0.5 contract improvements (RenderBodyOptions,
+narrowed `ReactElement | string` return type, `iframeFallback`
+flag) live in `@playgenx/renderer@0.1.0` in the monorepo and
+are still used by `apps/playground`. They will be published
+when the `@playgenx` org is created.
+
 ## [0.4.0] — 2026-07-11
 
 Release-please generated these notes from the v0.2.1 → v0.4.0
