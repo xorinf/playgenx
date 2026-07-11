@@ -38,10 +38,16 @@ if (result.ok) {
 
 ## Status
 
-**v0.1.0 — MVP.** One real provider (OpenAI), a full parse → validate
-pipeline, a local playground app, full docs. See
-[`CHANGELOG.md`](./CHANGELOG.md) and the [roadmap](./docs/roadmap.md) for
-what's next and what we deliberately left out.
+**v0.4.0 — production-ready.** Adds optional OpenTelemetry
+instrumentation (`@playgenx/observability`), a token-usage /
+pricing surface on every artifact, a Zod-backed body-parser with
+graceful fallback when Zod isn't installed, byte-aware response
+truncation, and a provider-contract migration that fixes a silent
+token-usage drop in the v0.3.x side-channel implementation. 390
+tests pass across 11 packages. See [`CHANGELOG.md`](./CHANGELOG.md)
+for the full set of changes, including the two breaking changes
+that affect third-party `Provider` implementations and the JSON
+parser behavior.
 
 ## Quickstart (offline, no API key)
 
