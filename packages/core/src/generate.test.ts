@@ -583,3 +583,109 @@ describe('provider options passthrough', () => {
     expect(captured.maxTokens).toBeUndefined();
   });
 });
+
+// Determinism-fingerprint contract: PR 2 attached `id` and
+// `promptFingerprint` to every successful artifact. These tests
+// pin the shape so a future refactor doesn't silently drop them.
+describe('Determinism fingerprints on generated artifacts', () => {
+  function rawProvider(body: string): import('@playgenx/types').Provider {
+    return {
+      id: 'raw',
+      defaultModel: 'raw-1',
+      complete: async () => body,
+    };
+  }
+
+  it('attaches a 64-hex-char id to every successful playground artifact', async () => {
+    const r = await generatePlayground(
+      { context: 'x', concept: 'y', kind: 'playground' },
+      { provider: rawProvider('<Card />') },
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.artifact.id).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('attaches a 64-hex-char promptFingerprint', async () => {
+    const r = await generatePlayground(
+      { context: 'x', concept: 'y', kind: 'playground' },
+      { provider: rawProvider('<Card />') },
+    );
+    if (!r.ok) return;
+    expect(r.artifact.promptFingerprint).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('id is stable for the same body+provider (re-rendered)', async () => {
+    const a = await generatePlayground(
+      { context: 'x', concept: 'y', kind: 'playground' },
+      { provider: rawProvider('<Card />') },
+    );
+    const b = await generatePlayground(
+      { context: 'x', concept: 'y', kind: 'playground' },
+      { provider: rawProvider('<Card />') },
+    );
+    if (!a.ok || !b.ok) return;
+    expect(a.artifact.id).toBe(b.artifact.id);
+  });
+
+  it('id changes when the body changes', async () => {
+    const a = await generatePlayground(
+      { context: 'x', concept: 'y', kind: 'playground' },
+      { provider: rawProvider('<Card />') },
+    );
+    const b = await generatePlayground(
+      { context: 'x', concept: 'y', kind: 'playground' },
+      { provider: rawProvider('<Text />') },
+    );
+    if (!a.ok || !b.ok) return;
+    expect(a.artifact.id).not.toBe(b.artifact.id);
+  });
+
+  it('promptFingerprint changes when the concept changes (cache key for repeat calls)', async () => {
+    const a = await generatePlayground(
+      { context: 'x', concept: 'y', kind: 'playground' },
+      { provider: rawProvider('<Card />') },
+    );
+    const b = await generatePlayground(
+      { context: 'x', concept: 'z', kind: 'playground' },
+      { provider: rawProvider('<Card />') },
+    );
+    if (!a.ok || !b.ok) return;
+    expect(a.artifact.promptFingerprint).not.toBe(b.artifact.promptFingerprint);
+  });
+
+  it('promptFingerprint is stable for the same request inputs', async () => {
+    const a = await generatePlayground(
+      { context: 'x', concept: 'y', kind: 'playground' },
+      { provider: rawProvider('<Card />') },
+    );
+    const b = await generatePlayground(
+      { context: 'x', concept: 'y', kind: 'playground' },
+      { provider: rawProvider('<Card />') },
+    );
+    if (!a.ok || !b.ok) return;
+    expect(a.artifact.promptFingerprint).toBe(b.artifact.promptFingerprint);
+  });
+
+  it('does NOT attach fingerprints when the validator rejects the body', async () => {
+    const r = await generatePlayground(
+      { context: 'x', concept: 'y', kind: 'playground' },
+      { provider: rawProvider('<Button onClick={() => Math.random()} />') },
+    );
+    expect(r.ok).toBe(false);
+  });
+
+  it('attaches fingerprints for JSON-bodied kinds (poll) too', async () => {
+    const json = JSON.stringify({
+      question: 'q',
+      options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }],
+    });
+    const r = await generatePoll(
+      { context: 'x', concept: 'y', kind: 'poll' },
+      { provider: rawProvider('```json\n' + json + '\n```') },
+    );
+    if (!r.ok) return;
+    expect(r.artifact.id).toMatch(/^[0-9a-f]{64}$/);
+    expect(r.artifact.promptFingerprint).toMatch(/^[0-9a-f]{64}$/);
+  });
+});

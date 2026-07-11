@@ -1,6 +1,6 @@
 {
   "name": "playgenx",
-  "version": "0.3.1",
+  "version": "0.4.0-beta.0",
   "description": "Open-source TypeScript SDK for generating interactive educational experiences from lecture context using LLMs.",
   "type": "module",
   "main": "./dist/index.mjs",

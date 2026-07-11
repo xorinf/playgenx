@@ -1,5 +1,6 @@
 import { extractArtifact } from '@playgenx/parser';
 import { DEFAULT_REGISTRY, type Registry } from '@playgenx/registry';
+import { sha256Hex } from '@playgenx/utils';
 import { validateForKind } from '@playgenx/validators';
 import type {
   ArtifactErrorCode,
@@ -275,6 +276,14 @@ async function runPipeline(
   // 5) Success. If we truncated, surface a warning so callers know
   //    the artifact body is incomplete (validator still ran; the
   //    artifact may or may not be valid for downstream rendering).
+  //
+  //    The two additive fingerprint fields are computed here so
+  //    callers can drive cache invalidation without re-running the
+  //    validator. Both are optional on `Artifact`; we attach them
+  //    on every successful generation so consumers never have to
+  //    branch on `if (result.artifact.id)`.
+  const bodyId = await sha256Hex(`${request.kind}|${options.provider.id}|${parsed.body}`);
+  const promptFp = await sha256Hex(`${request.kind}|${request.context}|${request.concept}|${prompt}`);
   return {
     ok: true,
     artifact: {
@@ -282,6 +291,8 @@ async function runPipeline(
       body: parsed.body,
       providerId: options.provider.id,
       model: options.model ?? options.provider.defaultModel,
+      id: bodyId,
+      promptFingerprint: promptFp,
       ...(truncated ? { warning: 'Response was truncated by maxResponseBytes; artifact may be incomplete.' } : {}),
     },
   };
@@ -320,6 +331,9 @@ function validatorErrorCode(message: string): ArtifactErrorCode {
     message.includes('require(')
   ) {
     return 'FORBIDDEN_CONSTRUCT';
+  }
+  if (message.startsWith('Non-deterministic expression')) {
+    return 'NON_DETERMINISTIC_EXPR';
   }
   return 'INVALID_JSON_SHAPE';
 }

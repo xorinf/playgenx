@@ -50,6 +50,22 @@ export interface Artifact {
    * — the caller may decide to retry with a larger budget.
    */
   readonly warning?: string;
+  /**
+   * Optional stable identifier derived from the artifact body.
+   * Same body + provider id + kind always produce the same id (sha-256,
+   * hex-encoded, 64 chars). Lets storage backends key entries without
+   * reading the body. May be omitted for callers who don't need it.
+   */
+  readonly id?: string;
+  /**
+   * Optional fingerprint of the inputs that *requested* this artifact:
+   * lecture context, the focused concept, the kind, and the prompt
+   * template version. Used for cache-hit detection by callers that
+   * want repeat-generation to be free. Stable for the same logical
+   * request across providers and models (only those change the body,
+   * not the fingerprint).
+   */
+  readonly promptFingerprint?: string;
 }
 
 /** Pipeline stage that produced an error. */
@@ -98,6 +114,8 @@ export type ArtifactErrorCode =
   | 'UNKNOWN_COMPONENT'
   /** The body contains a forbidden construct (eval / new Function / import / require). */
   | 'FORBIDDEN_CONSTRUCT'
+  /** The body contains an expression that breaks render determinism (Math / Date / window). */
+  | 'NON_DETERMINISTIC_EXPR'
   /** Generation timed out before the provider returned a response. */
   | 'TIMEOUT'
   /** Exceeded `maxRetries` on transient provider failures. */

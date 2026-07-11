@@ -8,3 +8,5 @@ export { tagNames } from './tag-names.js';
 export { hasBalancedTags } from './balanced-tags.js';
 export { stripCodeComments, lineOfFirst } from './strip-comments.js';
 export { stripStrings } from './strip-strings.js';
+export { findNonDeterministic } from './non-deterministic.js';
+export { sha256Hex } from './sha256.js';

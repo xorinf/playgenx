@@ -468,5 +468,40 @@ describe('validateForKind (kind-specific JSON shape checks)', () => {
       const tsx = '<div><Heading>Lab</Heading><Button>Hint</Button></div>';
       expect(validateForKind('lab', tsx)).toBeNull();
     });
+
+    it('rejects non-deterministic expressions (Math.random, Date.now, window.*)', () => {
+      const tsx = '<Button onClick={() => Math.random()} />';
+      const err = validateForKind('playground', tsx);
+      expect(err).not.toBeNull();
+      expect(err?.message).toMatch(/Non-deterministic expression/);
+      expect(err?.message).toContain('Math');
+    });
+
+    it('rejects Date.now() inside a JSX expression', () => {
+      const tsx = '<Text>{Date.now()}</Text>';
+      const err = validateForKind('playground', tsx);
+      expect(err?.message).toContain('Date');
+    });
+
+    it('accepts the word "Math" inside a JS string literal', () => {
+      const tsx = '<Heading label="Math is fun" />';
+      expect(validateForKind('playground', tsx)).toBeNull();
+    });
+
+    it('accepts identifiers that share prefixes (matches, updatedAt, ...)', () => {
+      const tsx = '<Card><Text>{matches.length}</Text><Text>{updatedAt}</Text></Card>';
+      expect(validateForKind('playground', tsx)).toBeNull();
+    });
+
+    it('does not run the non-deterministic check on JSON kinds', () => {
+      // JSON-body check is via validateForKind for poll/quiz/flashcards.
+      // A JSON body that happens to contain the word "Math" should
+      // still parse fine — the determinism check is TSX-only.
+      const json = JSON.stringify({
+        question: 'What is Math?',
+        options: [{ id: 'a', label: 'A study' }, { id: 'b', label: 'B study' }],
+      });
+      expect(validateForKind('poll', json)).toBeNull();
+    });
   });
 });

@@ -1,5 +1,11 @@
 import { BUILT_IN_TAGS, DEFAULT_REGISTRY, type Registry } from '@playgenx/registry';
-import { hasBalancedTags, lineOfFirst, stripCodeComments, tagNames } from '@playgenx/utils';
+import {
+  findNonDeterministic,
+  hasBalancedTags,
+  lineOfFirst,
+  stripCodeComments,
+  tagNames,
+} from '@playgenx/utils';
 import type { ValidateOptions, ValidationError } from './types.js';
 
 const BUILT_IN_SET = new Set(BUILT_IN_TAGS.map((t: string) => t.toLowerCase()));
@@ -164,6 +170,29 @@ export function validate(
     return {
       message: '`require(`is not allowed in artifacts',
       line: lineOfFirst(stripped, 'require('),
+    };
+  }
+
+  // 2b. No non-deterministic expressions. Only relevant for TSX
+  //     bodies; JSON-bodied kinds skip this entire function and run
+  //     the JSON shape check in `validateForKind` instead. Each
+  //     prohibited token is a JS reference whose value depends on
+  //     the moment of evaluation (Math.random, Date.now) or the
+  //     runtime environment (window, globalThis, process) — both
+  //     make a re-rendered artifact drift away from the original.
+  //     We reject the BARE identifier inside JS expression contexts
+  //     (`{...}` JSX expressions) and as standalone literals. To
+  //     avoid false positives on substrings inside attribute names
+  //     or string literals we strip strings + comments first.
+  //
+  //     Note: a future renderer could relax some of these if it
+  //     implements deterministic-output mode (frozen clock, seeded
+  //     PRNG). Until then, reject anything that would compromise it.
+  const nonDeterministic = findNonDeterministic(stripped);
+  if (nonDeterministic !== null) {
+    return {
+      message: `Non-deterministic expression \`${nonDeterministic}\` is not allowed in artifacts`,
+      line: lineOfFirst(stripped, nonDeterministic),
     };
   }
 
