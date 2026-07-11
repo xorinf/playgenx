@@ -13,6 +13,9 @@ import {
 } from 'playgenx';
 import { renderBody } from '@playgenx/renderer';
 import { componentMap } from '@playgenx/components';
+import { StorageProvider } from '@playgenx/storage-react';
+import { LocalAdapter } from '@playgenx/storage';
+import { LibraryPanel, RenderStored } from './LibraryPanel.js';
 
 type Status = 'idle' | 'loading' | 'ok' | 'error';
 
@@ -40,6 +43,30 @@ export function App() {
   const [kind, setKind] = useState<ArtifactKind>('playground');
   const [status, setStatus] = useState<Status>('idle');
   const [result, setResult] = useState<ArtifactResult | null>(null);
+  const [storedOverlay, setStoredOverlay] = useState<
+    | {
+        id: string;
+        kind: ArtifactKind;
+        body: string;
+        providerId: string;
+        model: string;
+      }
+    | null
+  >(null);
+
+  // Single shared adapter for the whole tree. Lives at module scope
+  // intentionally so re-renders of App don't recreate the adapter
+  // (which would invalidate StorageProvider's value reference and
+  // cause the library to reload on every keystroke).
+  const adapter = useMemo(
+    () =>
+      new LocalAdapter({
+        storage:
+          (typeof globalThis !== 'undefined' && (globalThis as { localStorage?: Storage }).localStorage) ||
+          undefined,
+      }),
+    [],
+  );
 
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
@@ -75,6 +102,7 @@ export function App() {
   }
 
   return (
+    <StorageProvider adapter={adapter}>
     <div className="app">
       <h1>PlayGenX Playground</h1>
       <p className="lede">
@@ -126,18 +154,51 @@ export function App() {
         />
       </div>
 
-      <div style={{ marginTop: 16 }}>
+      <div style={{ marginTop: 16, display: 'flex', gap: 16, alignItems: 'flex-start' }}>
         <button onClick={onGenerate} disabled={status === 'loading' || !apiKey}>
           {status === 'loading' ? 'Generating…' : 'Generate'}
         </button>
       </div>
 
-      {result && !result.ok && <ErrorBox error={result.error} />}
+      <div className="layout">
+        <main>
+          {result && !result.ok && <ErrorBox error={result.error} />}
 
-      {result && result.ok && (
-        <ResultView result={result} kind={kind} />
-      )}
+          {result && result.ok && (
+            <ResultView result={result} kind={kind} />
+          )}
+
+          {storedOverlay && !result && (
+            <RenderStored
+              stored={{
+                id: storedOverlay.id,
+                createdAt: 0,
+                artifact: {
+                  kind: storedOverlay.kind,
+                  body: storedOverlay.body,
+                  providerId: storedOverlay.providerId,
+                  model: storedOverlay.model,
+                },
+              }}
+            />
+          )}
+        </main>
+        <LibraryPanel
+          latest={result && result.ok ? result : null}
+          onLoad={(s) => {
+            setStoredOverlay({
+              id: s.id,
+              kind: s.artifact.kind,
+              body: s.artifact.body,
+              providerId: s.artifact.providerId,
+              model: s.artifact.model,
+            });
+            setResult(null);
+          }}
+        />
+      </div>
     </div>
+    </StorageProvider>
   );
 }
 
