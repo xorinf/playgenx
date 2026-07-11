@@ -10,4 +10,5 @@ export { stripCodeComments, stripJsComments, lineOfFirst } from './strip-comment
 export { stripStrings } from './strip-strings.js';
 export { findNonDeterministic } from './non-deterministic.js';
 export { sha256Hex } from './sha256.js';
+export { utf8ByteLength } from './byte-length.js';
 export { propsOfTag, type JsxProp } from './jsx-props.js';
