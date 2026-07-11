@@ -63,11 +63,11 @@
     "@testing-library/react": "^16.2.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "jsdom": "^25.0.1",
+    "jsdom": "^29.1.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "tsdown": "^0.22.4",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   }
 }

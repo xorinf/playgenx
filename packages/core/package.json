@@ -94,7 +94,7 @@
     "@playgenx/parser": "workspace:*",
     "@playgenx/providers": "workspace:*",
     "@playgenx/prompts": "workspace:*",
-    "@types/node": "^22.0.0",
-    "zod": "^3.23.0"
+    "@types/node": "^26.1.1",
+    "zod": "^4.4.3"
   }
 }
