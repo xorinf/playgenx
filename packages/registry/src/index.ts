@@ -4,6 +4,6 @@
  * @packageDocumentation
  */
 
-export type { Registry, ComponentName } from './types.js';
+export type { Registry, ComponentName, PropKind, PropSchema, ComponentSchema } from './types.js';
 export { createRegistry } from './create.js';
-export { DEFAULT_REGISTRY, BUILT_IN_TAGS } from './default.js';
+export { DEFAULT_REGISTRY, DEFAULT_COMPONENT_SCHEMAS, BUILT_IN_TAGS, findSchema } from './default.js';

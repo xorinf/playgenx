@@ -50,9 +50,15 @@ describe('findNonDeterministic', () => {
     expect(check('<Text>Self-driving cars</Text>')).toBeNull();
   });
 
-  it('does NOT match forbidden tokens inside a JS string literal', () => {
-    expect(check(`<Text label="Math is fun" />`)).toBeNull();
-    expect(check(`<Text label="process.env" />`)).toBeNull();
+  it('does NOT match forbidden tokens inside an English compound word', () => {
+    // `self-contained` should not match `self`.
+    expect(check('<Text>This playground is self-contained.</Text>')).toBeNull();
+    expect(check('<Text>Math-related content here.</Text>')).toBeNull();
+  });
+
+  it('still flags forbidden tokens in genuine JS contexts', () => {
+    expect(check('<Button onClick={() => self.fetch(url)} />')).toBe('self');
+    expect(check('<Text>{Math.PI}</Text>')).toBe('Math');
   });
 
   it('does NOT match forbidden tokens inside a JS line comment', () => {

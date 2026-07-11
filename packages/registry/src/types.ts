@@ -16,3 +16,5 @@ export interface Registry {
   list(): readonly ComponentName[];
   add(name: ComponentName): void;
 }
+
+export type { PropKind, PropSchema, ComponentSchema } from './schema.js';

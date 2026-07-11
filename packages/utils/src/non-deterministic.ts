@@ -74,7 +74,10 @@ function isTokenBoundary(body: string, idx: number, len: number): boolean {
   const before = idx === 0 ? '' : body[idx - 1] ?? '';
   const after = body[idx + len] ?? '';
   // Word boundary: not preceded or followed by an alphanumeric char.
-  return !isIdentChar(before) && !isIdentChar(after);
+  // We deliberately treat `-` as a boundary too so that English
+  // compound words (e.g. `self-contained`, `Math-related`) don't
+  // false-positive as identifiers.
+  return !isIdentChar(before) && !isIdentChar(after) && !isBoundaryChar(before) && !isBoundaryChar(after);
 }
 
 function isIdentChar(c: string): boolean {
@@ -87,4 +90,16 @@ function isIdentChar(c: string): boolean {
     code === 95 || // _
     code === 36 // $
   );
+}
+
+function isBoundaryChar(c: string): boolean {
+  if (!c) return false;
+  // `-` is treated as a word boundary so `self-contained` doesn't
+  // false-match `self`. Other punctuation is ignored: `.`
+  //   belongs to identifier-like continuations (e.g. `Math.PI`),
+  // `<` `>` are tag boundaries (a tag `<Math>` is caught by the
+  // registry check, not here), `/` is part of expressions like
+  // `getSelf()`. Keeping this list intentionally small keeps the
+  // matching predictable.
+  return c === '-';
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createRegistry } from '@playgenx/registry';
+import { createRegistry, DEFAULT_COMPONENT_SCHEMAS } from '@playgenx/registry';
 import { validate, validateForKind } from './check.js';
 
 describe('validate', () => {
@@ -503,5 +503,107 @@ describe('validateForKind (kind-specific JSON shape checks)', () => {
       });
       expect(validateForKind('poll', json)).toBeNull();
     });
+  });
+});
+
+// Prop-shape validation: opt-in via the `schemas` field on
+// ValidateOptions. The default schemas in @playgenx/registry cover
+// every component name in DEFAULT_REGISTRY; callers can supply a
+// narrower subset for a focused check.
+describe('prop-shape validation (validate with schemas)', () => {
+  it('passes when no schema is supplied (default behaviour, name-only)', () => {
+    // `<Button flavour="..." />` would be flagged by an exact schema
+    // check; without schemas the validator accepts unknown props on
+    // registered components. That preserves backward compatibility.
+    expect(validate('<Button label="Hi" flavour="primary" />')).toBeNull();
+  });
+
+  it('rejects a component prop not in the schema', () => {
+    const err = validate('<Button label="Hi" flavour="primary" />', undefined, {
+      schemas: DEFAULT_COMPONENT_SCHEMAS,
+    });
+    expect(err?.message).toMatch(/Unknown prop: <Button flavour>/);
+  });
+
+  it('rejects a missing required prop', () => {
+    const err = validate('<Slider max={10} />', undefined, {
+      schemas: DEFAULT_COMPONENT_SCHEMAS,
+    });
+    expect(err?.message).toMatch(/Missing required prop .min./);
+  });
+
+  it('rejects a wrong-kind prop (number schema, expression value)', () => {
+    const err = validate(
+      '<Slider min={min} max={max} />',
+      undefined,
+      {
+        schemas: [
+          {
+            name: 'Slider',
+            props: [
+              { name: 'min', kind: 'number', required: true },
+              { name: 'max', kind: 'number', required: true },
+            ],
+          },
+        ],
+      },
+    );
+    expect(err?.message).toMatch(/expected number, got expression/);
+  });
+
+  it('accepts a string-literal prop on a schema that requires string', () => {
+    expect(
+      validate('<Button label="Go" />', undefined, {
+        schemas: [
+          {
+            name: 'Button',
+            props: [{ name: 'label', kind: 'string', required: true }],
+          },
+        ],
+      }),
+    ).toBeNull();
+  });
+
+  it('accepts a `node` prop with any expression', () => {
+    // data is `node` in the default Chart schema.
+    expect(
+      validate('<Chart kind="bar" data={someVar} />', undefined, {
+        schemas: DEFAULT_COMPONENT_SCHEMAS,
+      }),
+    ).toBeNull();
+  });
+
+  it('does not check built-in HTML tags even if a schema is supplied', () => {
+    // `<div colour="blue" />` is fine — `div` is built-in, not in the
+    // registry. The schemas check only runs for registered components.
+    expect(
+      validate('<div colour="blue" />', undefined, {
+        schemas: DEFAULT_COMPONENT_SCHEMAS,
+      }),
+    ).toBeNull();
+  });
+
+  it('prop-shape check is skipped entirely when schemas is the empty array', () => {
+    // Callers can opt OUT by passing `schemas: []`.
+    expect(
+      validate('<Button flavour="bad" />', undefined, { schemas: [] }),
+    ).toBeNull();
+  });
+
+  it('validateForKind (TSX path) forwards the schemas option', () => {
+    const err = validateForKind('playground', '<Button flavour="bad" />', undefined, {
+      schemas: DEFAULT_COMPONENT_SCHEMAS,
+    });
+    expect(err?.message).toMatch(/Unknown prop/);
+  });
+
+  it('does not run prop-shape on JSON kinds even if schemas is supplied', () => {
+    const json = JSON.stringify({
+      question: 'q',
+      options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }],
+    });
+    // schemas is irrelevant for JSON kinds — the JSON shape check is
+    // the source of truth.
+    expect(validateForKind('poll', json, undefined, { schemas: DEFAULT_COMPONENT_SCHEMAS })).toBeNull();
   });
 });

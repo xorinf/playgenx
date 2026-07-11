@@ -17,4 +17,13 @@ export interface ValidateOptions {
    * if you've already validated the body yourself with a stricter schema.
    */
   readonly skipJsonCheck?: boolean;
+  /**
+   * Optional prop-shape schemas. When supplied and the body uses a
+   * capitalized tag whose name matches a schema entry, props are
+   * checked against the schema. Unknown props are rejected; required
+   * props that are missing are reported. Has no effect on JSON-bodied
+   * kinds, built-in HTML tags, or components that have no matching
+   * schema entry — those fall back to the name-only check.
+   */
+  readonly schemas?: ReadonlyArray<import('@playgenx/registry').ComponentSchema>;
 }
