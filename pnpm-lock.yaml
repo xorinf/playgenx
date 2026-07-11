@@ -61,7 +61,7 @@ importers:
         version: 0.3.1
       vitest:
         specifier: ^4.1.10
-        version: 4.1.10(@types/node@26.1.1)(jsdom@25.0.1)(vite@8.1.4(@types/node@26.1.1))
+        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@26.1.1)(jsdom@25.0.1)(vite@8.1.4(@types/node@26.1.1))
 
   apps/playground:
     dependencies:
@@ -134,9 +134,59 @@ importers:
         version: 6.0.3
       vitest:
         specifier: ^4.1.10
-        version: 4.1.10(@types/node@26.1.1)(jsdom@25.0.1)(vite@8.1.4(@types/node@26.1.1))
+        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@26.1.1)(jsdom@25.0.1)(vite@8.1.4(@types/node@26.1.1))
 
-  packages/core: {}
+  packages/core:
+    dependencies:
+      typescript:
+        specifier: ^5.6.0 || ^6.0.0
+        version: 6.0.3
+    devDependencies:
+      '@playgenx/observability':
+        specifier: workspace:*
+        version: link:../observability
+      '@playgenx/parser':
+        specifier: workspace:*
+        version: link:../parser
+      '@playgenx/prompts':
+        specifier: workspace:*
+        version: link:../prompts
+      '@playgenx/providers':
+        specifier: workspace:*
+        version: link:../providers
+      '@playgenx/registry':
+        specifier: workspace:*
+        version: link:../registry
+      '@playgenx/types':
+        specifier: workspace:*
+        version: link:../types
+      '@playgenx/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@playgenx/validators':
+        specifier: workspace:*
+        version: link:../validators
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.1
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
+
+  packages/observability:
+    devDependencies:
+      '@opentelemetry/api':
+        specifier: ^1.9.1
+        version: 1.9.1
+      tsdown:
+        specifier: ^0.22.4
+        version: 0.22.4(typescript@6.0.3)(unrun@0.3.1)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@26.1.1)(jsdom@25.0.1)(vite@8.1.4(@types/node@26.1.1))
 
   packages/parser: {}
 
@@ -192,7 +242,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: ^4.1.10
-        version: 4.1.10(@types/node@26.1.1)(jsdom@25.0.1)(vite@8.1.4(@types/node@26.1.1))
+        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@26.1.1)(jsdom@25.0.1)(vite@8.1.4(@types/node@26.1.1))
 
   packages/storage:
     dependencies:
@@ -239,7 +289,7 @@ importers:
         version: 6.0.3
       vitest:
         specifier: ^4.1.10
-        version: 4.1.10(@types/node@26.1.1)(jsdom@25.0.1)(vite@8.1.4(@types/node@26.1.1))
+        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@26.1.1)(jsdom@25.0.1)(vite@8.1.4(@types/node@26.1.1))
 
   packages/types: {}
 
@@ -447,6 +497,10 @@ packages:
     peerDependencies:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
+
+  '@opentelemetry/api@1.9.1':
+    resolution: {integrity: sha512-gLyJlPHPZYdAk1JENA9LeHejZe1Ti77/pTeFm/nMXmQH/HFZlcS/O2XJB+L8fkbrNSqhdtlvjBVjxwUYanNH5Q==}
+    engines: {node: '>=8.0.0'}
 
   '@oxc-project/types@0.139.0':
     resolution: {integrity: sha512-r9gHphtCs+1M7J0pw6Sn/hh/Wpa/iQrOOkrNAlVLF/gHq+/CJmHIWKKUUhdWjcD6CIa8idarspCsASiXCXvFUw==}
@@ -1741,6 +1795,9 @@ packages:
   yuku-parser@0.5.44:
     resolution: {integrity: sha512-mAhpQZ/bXjxZmKiGUqEWskC9mZTcTBv6/fdzVdzdjM6XuD1DP3IavdLVWdM39L9ewK9vS9OtJmaKNeWgRzpy0w==}
 
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
 snapshots:
 
   '@asamuzakjp/css-color@3.2.0':
@@ -2020,6 +2077,8 @@ snapshots:
       '@emnapi/runtime': 1.11.1
       '@tybys/wasm-util': 0.10.3
     optional: true
+
+  '@opentelemetry/api@1.9.1': {}
 
   '@oxc-project/types@0.139.0': {}
 
@@ -3048,7 +3107,7 @@ snapshots:
       '@types/node': 26.1.1
       fsevents: 2.3.3
 
-  vitest@4.1.10(@types/node@26.1.1)(jsdom@25.0.1)(vite@8.1.4(@types/node@26.1.1)):
+  vitest@4.1.10(@opentelemetry/api@1.9.1)(@types/node@26.1.1)(jsdom@25.0.1)(vite@8.1.4(@types/node@26.1.1)):
     dependencies:
       '@vitest/expect': 4.1.10
       '@vitest/mocker': 4.1.10(vite@8.1.4(@types/node@26.1.1))
@@ -3071,6 +3130,7 @@ snapshots:
       vite: 8.1.4(@types/node@26.1.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
+      '@opentelemetry/api': 1.9.1
       '@types/node': 26.1.1
       jsdom: 25.0.1
     transitivePeerDependencies:
@@ -3147,3 +3207,5 @@ snapshots:
       '@yuku-parser/binding-linux-x64-musl': 0.5.44
       '@yuku-parser/binding-win32-arm64': 0.5.44
       '@yuku-parser/binding-win32-x64': 0.5.44
+
+  zod@3.25.76: {}
