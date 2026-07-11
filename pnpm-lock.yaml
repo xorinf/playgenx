@@ -220,7 +220,7 @@ importers:
   packages/registry: {}
 
   packages/renderer:
-    dependencies:
+    devDependencies:
       '@playgenx/registry':
         specifier: workspace:*
         version: link:../registry
@@ -230,7 +230,6 @@ importers:
       '@playgenx/utils':
         specifier: workspace:*
         version: link:../utils
-    devDependencies:
       '@testing-library/react':
         specifier: ^16.2.0
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -276,14 +275,13 @@ importers:
         version: 22.20.1
 
   packages/storage-react:
-    dependencies:
+    devDependencies:
       '@playgenx/storage':
         specifier: workspace:*
         version: link:../storage
       '@playgenx/types':
         specifier: workspace:*
         version: link:../types
-    devDependencies:
       '@testing-library/react':
         specifier: ^16.2.0
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)

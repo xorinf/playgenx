@@ -1,6 +1,6 @@
 {
   "name": "@playgenx/storage-react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "React 19 hooks over an @playgenx/storage ArtifactStorage. Save / list / re-mount / delete artifacts from components.",
   "type": "module",
   "main": "./dist/index.mjs",
@@ -57,10 +57,7 @@
   "peerDependencies": {
     "react": "^19.2.0"
   },
-  "dependencies": {
-    "@playgenx/storage": "workspace:*",
-    "@playgenx/types": "workspace:*"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@playgenx/storage": "workspace:*",
     "@playgenx/types": "workspace:*",
