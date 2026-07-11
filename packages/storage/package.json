@@ -83,6 +83,6 @@
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.1085.0",
     "@playgenx/types": "workspace:*",
-    "@types/node": "^22.0.0"
+    "@types/node": "^26.1.1"
   }
 }
