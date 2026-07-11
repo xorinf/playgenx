@@ -1,0 +1,73 @@
+{
+  "name": "@playgenx/components",
+  "version": "0.1.0",
+  "description": "Default React 19 implementations for every entry in DEFAULT_REGISTRY. Pair with @playgenx/registry and the parser/validator pipeline.",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "lint": "eslint src",
+    "test": "vitest --run"
+  },
+  "keywords": [
+    "playgenx",
+    "react",
+    "components"
+  ],
+  "author": "xorinf <118471720+xorinf@users.noreply.github.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xorinf/playgenx.git",
+    "directory": "packages/components"
+  },
+  "bugs": {
+    "url": "https://github.com/xorinf/playgenx/issues"
+  },
+  "homepage": "https://github.com/xorinf/playgenx/tree/main/packages/components",
+  "publishConfig": {
+    "access": "public"
+  },
+  "tsdown": {
+    "entry": [
+      "src/index.ts"
+    ],
+    "format": [
+      "esm"
+    ],
+    "dts": true,
+    "sourcemap": true,
+    "clean": true,
+    "deps": {
+      "alwaysBundle": [
+        "^@playgenx/"
+      ]
+    }
+  },
+  "peerDependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@playgenx/registry": "workspace:*",
+    "@testing-library/react": "^16.2.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "jsdom": "^25.0.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tsdown": "^0.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
+  }
+}
