@@ -79,3 +79,73 @@ export {
   flashcardsPrompt,
   labPrompt,
 } from '@playgenx/prompts';
+
+// v0.5.2: re-export the 3 React-flavored packages from the umbrella.
+// viBe Phase 11 contract: full-stack consumers can install
+// `playgenx` + `react` + `react-dom` and get the renderer +
+// components + storage-react surface without juggling 4 packages.
+// The 3 packages are peer deps (NOT bundled) so backend consumers
+// don't pull React into their bundle.
+//
+// CSP contract: `renderBody()` does NOT use `new Function(string)`
+// to evaluate TSX expressions — expression positions become inert
+// `RenderExpression` placeholders that string-stringify. Consumers
+// can safely render through a CSP that forbids `'unsafe-eval'`.
+export {
+  renderBody,
+  renderNodes,
+  renderNode,
+  RenderExpression,
+  propToSource,
+} from '@playgenx/renderer';
+export type {
+  RendererNode,
+  RendererElement,
+  RendererText,
+  RendererFallthrough,
+  ParsedProp,
+  PropKind,
+  ComponentMap,
+  RenderInputProps,
+  RenderBodyOptions,
+} from '@playgenx/renderer';
+export {
+  Button,
+  TextField,
+  Slider,
+  Chart,
+  Container,
+  Code,
+  Heading,
+  Text,
+  Stepper,
+  Card,
+  List,
+  componentMap,
+  type ButtonProps,
+  type TextFieldProps,
+  type SliderProps,
+  type ChartProps,
+  type ChartKind,
+  type ContainerProps,
+  type CodeProps,
+  type HeadingProps,
+  type TextProps,
+  type StepperProps,
+  type Step,
+  type CardProps,
+  type ListProps,
+  type ComponentMapKey,
+} from '@playgenx/components';
+export {
+  StorageProvider,
+  StorageContext,
+  useStorage,
+  useStorageContext,
+  useSaveArtifact,
+  useListedArtifacts,
+  useStoredArtifact,
+  useDeleteArtifact,
+  type StorageProviderProps,
+  type HookResult,
+} from '@playgenx/storage-react';

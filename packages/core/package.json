@@ -1,6 +1,6 @@
 {
   "name": "playgenx",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Open-source TypeScript SDK for generating interactive educational experiences from lecture context using LLMs.",
   "type": "module",
   "main": "./dist/index.mjs",
@@ -57,11 +57,22 @@
     "deps": {
       "alwaysBundle": [
         "^@playgenx/"
+      ],
+      "external": [
+        "@playgenx/components",
+        "@playgenx/renderer",
+        "react",
+        "react-dom"
       ]
     }
   },
   "peerDependencies": {
-    "typescript": "^5.6.0 || ^6.0.0"
+    "typescript": "^5.6.0 || ^6.0.0",
+    "@playgenx/components": "^0.1.0",
+    "@playgenx/renderer": "^0.1.0",
+    "@playgenx/storage-react": "^0.1.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "peerDependenciesMeta": {
     "@opentelemetry/api": {
@@ -72,7 +83,10 @@
     }
   },
   "devDependencies": {
+    "@playgenx/components": "workspace:*",
     "@playgenx/observability": "workspace:*",
+    "@playgenx/renderer": "workspace:*",
+    "@playgenx/storage-react": "workspace:*",
     "@playgenx/registry": "workspace:*",
     "@playgenx/types": "workspace:*",
     "@playgenx/utils": "workspace:*",
