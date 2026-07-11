@@ -48,3 +48,9 @@ Task-oriented how-tos.
 - [CONTRIBUTING](../CONTRIBUTING.md) — how to contribute.
 - [SECURITY](../SECURITY.md) — how to report a vulnerability.
 - [CHANGELOG](../CHANGELOG.md) — release history.
+
+
+## Sessions & retros
+
+- [PR-1..6 retrospective batch (2026-07)](retros/index.md) — single-session batch shipping
+  ArtifactStorage, determinism, components, renderer, storage-react, and the S3 adapter.
