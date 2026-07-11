@@ -153,6 +153,92 @@ string` shape as the existing `playgroundPrompt`.
 
 [0.2.0]: https://github.com/xorinf/playgenx/releases/tag/v0.2.0
 
+## [0.5.0] — 2026-07-11
+
+### Breaking changes
+
+- **The umbrella `playgenx` now has peer dependencies** on
+  `@playgenx/renderer`, `@playgenx/components`,
+  `@playgenx/storage-react`, `react`, and `react-dom`. These are
+  declared as peer deps (NOT bundled into the umbrella dist) so
+  backend-only consumers don't pull React into their bundle. Full-
+  stack consumers who already had `npm install react react-dom` see
+  no change — the umbrella re-exports the renderer + components +
+  storage-react symbols (see `Added` below), and React is loaded
+  from the host tree. Full-stack consumers who don't have React
+  installed will see a peer-dependency warning on `npm install`;
+  this is a one-time setup cost, not a runtime change.
+
+- **`@playgenx/components`, `@playgenx/renderer`, and
+  `@playgenx/storage-react` are now PUBLIC npm packages.**
+  They live under the `@playgenx` npm org (the org must be created
+  on the npm registry before the first publish — a one-time web
+  step on npmjs.com). Anyone using the umbrella's re-exports of
+  these symbols must keep the corresponding packages installed at
+  runtime. Backends that don't import them are unaffected.
+
+### Added
+
+- **Optional React-side rendering pipeline** under the umbrella.
+  `playgenx` v0.5 now re-exports the `@playgenx/renderer`,
+  `@playgenx/components`, and `@playgenx/storage-react` symbols.
+  Full-stack consumers can `npm install playgenx react react-dom`
+  and get every artifact kind rendered end-to-end with no extra
+  package juggling.
+
+- **`@playgenx/renderer`**: TSX/HTML body → React 19 tree. The
+  `renderBody(body, componentMap, options?)` export satisfies the
+  viBe Phase 11 contract (return type `ReactElement | string`).
+  Empty / whitespace-only bodies return `""`; a single plain-text
+  body returns the text as a `string`; multi-node bodies return a
+  `<>` Fragment of `ReactElement`s.
+
+  **CSP contract**: `renderBody()` does NOT use `new Function(string)`
+  to evaluate TSX expressions. Expression positions become inert
+  `RenderExpression` placeholders that stringify to their source
+  text. Consumers can safely render through a CSP that forbids
+  `'unsafe-eval'` (viBe's PlaygenxGlobalSettings sandboxCSP does
+  exactly this).
+
+- **`@playgenx/components`**: 11 React 19 implementations,
+  `@playgenx/components.componentMap` keyed by PascalCase tag name.
+  Re-exported as named exports from the umbrella.
+
+- **`@playgenx/storage-react`**: `StorageProvider` plus 5 hooks
+  (`useStorage`, `useStorageContext`, `useSaveArtifact`,
+  `useListedArtifacts`, `useStoredArtifact`, `useDeleteArtifact`).
+  Re-exported from the umbrella. The umbrella's `playgenx-core` is
+  the same package as v0.4.0 — these are new surface only available
+  when the scoped packages are installed.
+
+### Internal
+
+- The umbrella dist size grew by ~0.3 KB (194 → 195 KB unpacked)
+  because the 3 React-flavored packages are no longer bundled.
+  The total installed size is roughly the same — the work moved
+  into peer deps.
+- `dist-self-contained` test updated to allow the v0.5 whitelist
+  of public scoped packages (`@playgenx/components`,
+  `@playgenx/renderer`, `@playgenx/storage-react`) as external
+  imports. The original v0.2.2 guarantee — no PRIVATE workspace
+  package leaks from the umbrella dist — still holds.
+- `renderBody` got the `options?: RenderBodyOptions` arg with
+  `throwOnError?: boolean` (surface errors to `console.error`) and
+  `iframeFallback?: boolean` (reserved for a v0.6 sandboxed path;
+  warns in dev today, ignored in prod).
+
+### Notes
+
+- viBe (the first external consumer) can upgrade by adding
+  `@playgenx/components` and `@playgenx/renderer` to its frontend
+  dependencies. Their existing CSP-compliant renderer tree works
+  unchanged — see `notes/phase-11-renderer-design.md` in the viBe
+  repo for the migration plan.
+- The `@playgenx` npm scope must be created at npmjs.com before
+  the first publish. Until then, consumers can use the umbrella's
+  re-exports in development but production deploys need the scoped
+  packages on npm.
+
 ## [0.4.0] — 2026-07-11
 
 Release-please generated these notes from the v0.2.1 → v0.4.0

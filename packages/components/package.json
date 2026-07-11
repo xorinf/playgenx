@@ -1,6 +1,6 @@
 {
   "name": "@playgenx/components",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "description": "Default React 19 implementations for every entry in DEFAULT_REGISTRY. Pair with @playgenx/registry and the parser/validator pipeline.",
   "type": "module",
   "main": "./dist/index.mjs",

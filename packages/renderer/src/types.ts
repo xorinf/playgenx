@@ -99,3 +99,21 @@ export interface RenderInputProps {
   /** Marker so listeners can introspect the source. */
   readonly 'data-renderer-name'?: string;
 }
+
+/**
+ * Options bag for {@link renderBody}. The flags are doc-only stubs
+ * for v0.5 — see `renderBody` in `render.tsx` for the runtime
+ * behavior. Re-exported as a type so consumers can pass it
+ * structurally without importing from the implementation module.
+ */
+export interface RenderBodyOptions {
+  /** Surface render failures to `console.error`. Default `false`. */
+  readonly throwOnError?: boolean;
+  /**
+   * Reserved for a future release. When `true`, the renderer
+   * would mount a sandboxed iframe for untrusted bodies. In v0.5
+   * the flag is accepted and ignored (with a dev-mode
+   * `console.warn`).
+   */
+  readonly iframeFallback?: boolean;
+}
