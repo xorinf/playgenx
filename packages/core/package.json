@@ -57,21 +57,11 @@
     "deps": {
       "alwaysBundle": [
         "^@playgenx/"
-      ],
-      "external": [
-        "@playgenx/components",
-        "@playgenx/renderer",
-        "react",
-        "react-dom"
       ]
     }
   },
   "peerDependencies": {
-    "typescript": "^5.6.0 || ^6.0.0",
-    "@playgenx/components": "^0.5.0",
-    "@playgenx/renderer": "^0.5.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "typescript": "^5.6.0 || ^6.0.0"
   },
   "peerDependenciesMeta": {
     "@opentelemetry/api": {
@@ -82,11 +72,8 @@
     }
   },
   "devDependencies": {
-    "@playgenx/components": "workspace:*",
     "@playgenx/observability": "workspace:*",
-    "@playgenx/renderer": "workspace:*",
     "@playgenx/registry": "workspace:*",
-    "@playgenx/storage-react": "workspace:*",
     "@playgenx/types": "workspace:*",
     "@playgenx/utils": "workspace:*",
     "@playgenx/validators": "workspace:*",
