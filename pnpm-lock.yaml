@@ -65,6 +65,12 @@ importers:
 
   apps/playground:
     dependencies:
+      '@playgenx/components':
+        specifier: workspace:*
+        version: link:../../packages/components
+      '@playgenx/renderer':
+        specifier: workspace:*
+        version: link:../../packages/renderer
       playgenx:
         specifier: workspace:*
         version: link:../../packages/core
@@ -141,6 +147,46 @@ importers:
         version: link:../types
 
   packages/registry: {}
+
+  packages/renderer:
+    dependencies:
+      '@playgenx/registry':
+        specifier: workspace:*
+        version: link:../registry
+      '@playgenx/types':
+        specifier: workspace:*
+        version: link:../types
+      '@playgenx/utils':
+        specifier: workspace:*
+        version: link:../utils
+    devDependencies:
+      '@testing-library/react':
+        specifier: ^16.2.0
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@types/react':
+        specifier: ^19.2.17
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.17)
+      jsdom:
+        specifier: ^25.0.1
+        version: 25.0.1
+      react:
+        specifier: ^19.2.7
+        version: 19.2.7
+      react-dom:
+        specifier: ^19.2.7
+        version: 19.2.7(react@19.2.7)
+      tsdown:
+        specifier: ^0.22.4
+        version: 0.22.4(typescript@6.0.3)(unrun@0.3.1)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@26.1.1)(jsdom@25.0.1)(vite@8.1.4(@types/node@26.1.1))
 
   packages/storage:
     dependencies:

@@ -11,6 +11,8 @@ import {
   type ArtifactKind,
   type ArtifactResult,
 } from 'playgenx';
+import { renderBody } from '@playgenx/renderer';
+import { componentMap } from '@playgenx/components';
 
 type Status = 'idle' | 'loading' | 'ok' | 'error';
 
@@ -196,18 +198,39 @@ function ErrorBox({ error }: { error: ArtifactError }) {
 }
 
 function Sandbox({ body }: { body: string }) {
-  // Render the body inside a sandboxed iframe. We DO NOT eval it as JS — we
-  // put the source in a <pre> and also embed it in a basic HTML page.
-  const srcDoc = `<!doctype html>
+  // Render the body through @playgenx/renderer against the default
+  // componentMap from @playgenx/components. Try the render; if any
+  // component throws (e.g. because a runtime prop value is `undefined`),
+  // fall back to the safe source-only preview so the user still sees
+  // *something*.
+  try {
+    return (
+      <div
+        data-pgx-preview="live"
+        style={{
+          border: '1px dashed #cbd5e1',
+          borderRadius: '6px',
+          padding: '12px',
+          background: '#ffffff',
+          fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+          color: '#0f172a',
+        }}
+      >
+        {renderBody(body, componentMap)}
+      </div>
+    );
+  } catch {
+    const srcDoc = `<!doctype html>
 <html><head><meta charset="utf-8"><style>
   body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 16px; }
   pre { background: #f4f4f5; padding: 12px; border-radius: 6px; overflow: auto; }
 </style></head>
 <body>
-  <h3>Generated body (not executed in v0.1.0)</h3>
+  <h3>Generated body (renderer threw, showing source)</h3>
   <pre>${escapeHtml(body)}</pre>
 </body></html>`;
-  return <iframe sandbox="allow-scripts" srcDoc={srcDoc} title="Generated body preview" />;
+    return <iframe sandbox="allow-scripts" srcDoc={srcDoc} title="Generated body preview" />;
+  }
 }
 
 function escapeHtml(s: string): string {
