@@ -16,8 +16,15 @@ export type {
   PropKind,
   ComponentMap,
   RenderInputProps,
+  RenderBodyOptions,
 } from './types.js';
 
 export { parseBody, parseBodyNodes, isBuiltInTag } from './parser.js';
 
-export { renderNode, renderNodes, renderBody, RenderExpression, propToSource } from './render.js';
+export {
+  renderNode,
+  renderNodes,
+  renderBody,
+  RenderExpression,
+  propToSource,
+} from './render.js';

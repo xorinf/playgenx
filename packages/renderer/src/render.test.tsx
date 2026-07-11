@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as React from 'react';
 import { render, cleanup, screen } from '@testing-library/react';
 import { afterEach } from 'vitest';
 
-import { renderBody, renderNodes, RenderExpression } from './render.js';
+import * as parserModule from './parser.js';
 import { parseBodyNodes } from './parser.js';
+import { renderBody, renderNodes, RenderExpression } from './render.js';
 import type { ComponentMap } from './types.js';
 
 afterEach(() => cleanup());
@@ -95,6 +96,97 @@ describe('renderBody (high-level)', () => {
     expect(card.getAttribute('data-title')).toBe('t');
     expect(card.querySelector('[data-pgx="Heading"]')!.textContent).toBe('Hello');
     expect(card.querySelector('[data-pgx="Text"]')!.textContent).toBe('world');
+  });
+});
+
+describe('renderBody (v0.5 contract)', () => {
+  it('returns an empty string for empty body', () => {
+    const out = renderBody('', registry);
+    expect(out).toBe('');
+  });
+
+  it('returns an empty string for whitespace-only body', () => {
+    const out = renderBody('   \n\t  ', registry);
+    expect(out).toBe('');
+  });
+
+  it('returns a string (not a React element) for a single text node', () => {
+    // viBe's Phase 11 contract: <>{element}</> renders strings
+    // directly without React warning about a text-only Fragment.
+    const out = renderBody('Hello, world!', registry);
+    expect(typeof out).toBe('string');
+    expect(out).toBe('Hello, world!');
+  });
+
+  it('returns the body as a string for malformed input (parse failure)', () => {
+    // The current parser never throws — it falls back to
+    // RendererFallthrough nodes — so a real parse-failure path is
+    // defensive. Force a throw by spying on parseBodyNodes to
+    // simulate a future version that does throw.
+    const spy = vi
+      .spyOn(parserModule, 'parseBodyNodes')
+      .mockImplementation(() => {
+        throw new Error('simulated parser failure');
+      });
+    try {
+      const out = renderBody('<Button label="x" />', registry, {
+        throwOnError: false,
+      });
+      expect(out).toBe('<Button label="x" />');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('logs to console.error when throwOnError is true and parsing fails', () => {
+    const spy = vi
+      .spyOn(parserModule, 'parseBodyNodes')
+      .mockImplementation(() => {
+        throw new Error('simulated parser failure');
+      });
+    const errors: unknown[][] = [];
+    const orig = console.error;
+    console.error = (...args: unknown[]) => {
+      errors.push(args);
+    };
+    try {
+      const out = renderBody('<Button label="x" />', registry, {
+        throwOnError: true,
+      });
+      expect(out).toBe('<Button label="x" />');
+      expect(errors.length).toBe(1);
+      expect(String(errors[0]?.[0])).toContain('parseBodyNodes threw');
+    } finally {
+      console.error = orig;
+      spy.mockRestore();
+    }
+  });
+
+  it('returns the body as a string when iframeFallback is true (reserved flag)', () => {
+    // iframeFallback is accepted and ignored in v0.5. The render
+    // still happens inline; the flag is reserved for v0.6.
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const out = renderBody('<Button label="x" />', registry, { iframeFallback: true });
+    // Dev-mode: console.warn is called. We don't assert on its
+    // message in NODE_ENV=production to keep the test robust.
+    if (process.env.NODE_ENV !== 'production') {
+      expect(warnSpy).toHaveBeenCalled();
+    }
+    // Output is still a React element (inline render), not an iframe.
+    expect(typeof out).toBe('object');
+    warnSpy.mockRestore();
+  });
+
+  it('return type is ReactElement | string (compile-time check)', () => {
+    // This is a TS-only check at the call site. If the signature
+    // regresses, the next two lines will fail to compile.
+    const element: React.ReactElement = renderBody(
+      '<Button label="x" />',
+      registry,
+    ) as React.ReactElement;
+    const text: string = renderBody('just text', registry) as string;
+    expect(element).toBeTruthy();
+    expect(text).toBe('just text');
   });
 });
 

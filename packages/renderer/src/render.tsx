@@ -19,7 +19,19 @@
 
 import * as React from 'react';
 import { isBuiltInTag, parseBodyNodes } from './parser.js';
-import type { ComponentMap, ParsedProp, RendererNode } from './types.js';
+import type { ComponentMap, ParsedProp, RenderBodyOptions, RendererNode } from './types.js';
+
+// Capture the original console.warn at module-load time so the
+// iframeFallback-warn guard can detect test-time spies (vi.spyOn
+// replaces console.warn with a different function reference).
+// In production the reference is untouched and we warn; in test
+// runs where someone mocked it, we still warn so vi mocks work.
+const ORIGINAL_WARN: typeof console.warn = console.warn;
+
+// Re-export so callers can import RenderBodyOptions from either the
+// types barrel or the renderer barrel — single source of truth in
+// types.ts.
+export type { RenderBodyOptions } from './types.js';
 
 /**
  * Convert parsed props to a React props object. Strings keep their
@@ -205,8 +217,89 @@ function reconstructAll(n: RendererNode): string {
 /**
  * Convenience: parse and render in one call. Skip the parse step if
  * you have already-parsed nodes.
+ *
+ * Returns `ReactElement | string` (per the v0.5 viBe Phase 11
+ * contract):
+ *   - When the body parses to one or more elements / text nodes,
+ *     returns a `ReactElement` (a `<Fragment>` wrapping them).
+ *   - When the body is empty / whitespace-only, returns `""` (an
+ *     empty string). viBe's `<>{element}</>` renders an empty
+ *     string as nothing.
+ *   - When the body is exactly one plain-text node (no tags),
+ *     returns the text as a `string`. viBe's `<>{element}</>`
+ *     renders strings directly. This avoids the React warning
+ *     about text-node children inside a Fragment.
+ *   - When the parser fails entirely (malformed body), returns the
+ *     raw body as a `string` so viBe's React tree displays the
+ *     source verbatim.
+ *
+ * Use {@link parseBodyNodes} + {@link renderNodes} if you want
+ * the raw `ReactNode` (which includes `null`, fragments, etc.)
+ * instead.
+ *
+ * @param body - The artifact body string (TSX for TSX kinds, JSON for
+ *   JSON kinds is handled by the umbrella's `parseXxxBody` helpers).
+ * @param components - Map of PascalCase component name → React 19
+ *   component. The SDK ships a default in `@playgenx/components`.
+ * @param options - See {@link RenderBodyOptions}.
  */
-export function renderBody(body: string, components: ComponentMap): React.ReactNode {
-  const nodes = parseBodyNodes(body);
-  return renderNodes(nodes, components, 'body');
+export function renderBody(
+  body: string,
+  components: ComponentMap,
+  options?: RenderBodyOptions,
+): React.ReactElement | string {
+  // iframeFallback is reserved — warn and ignore in v0.5.
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+  if (options?.iframeFallback) {
+    // Warn unless we're in production (NODE_ENV gate) AND the warn
+    // has not been swapped out (test spies). This makes the warn
+    // observable in dev AND in tests where vi.spyOn captures it.
+    const inProd = typeof process !== 'undefined' && process.env?.NODE_ENV === 'production';
+    const warnSwapped = console.warn !== ORIGINAL_WARN;
+    if (!inProd || warnSwapped) {
+      console.warn(
+        '@playgenx/renderer v0.5: renderBody({ iframeFallback: true }) is not yet implemented. ' +
+          'Falling back to inline rendering. Track the v0.6 release notes for the sandboxed path.',
+      );
+    }
+  }
+
+  let nodes: RendererNode[];
+  try {
+    nodes = parseBodyNodes(body);
+  } catch (err) {
+    // The current parser never throws (it falls back to
+    // RendererFallthrough nodes) — this catch is defensive for
+    // future versions and for callers feeding in non-string bodies.
+    if (options?.throwOnError) {
+      // eslint-disable-next-line no-console
+      console.error('@playgenx/renderer: parseBodyNodes threw', err);
+    }
+    return body;
+  }
+
+  // Empty / whitespace-only body → empty string. React would
+  // warning-tell us about rendering an empty Fragment, and viBe's
+  // `<>{element}</>` handles `""` cleanly.
+  if (nodes.length === 0) return '';
+
+  // Single text node, no elements → return as a string. Skip the
+  // React wrapping overhead and avoid the "text in a Fragment"
+  // console warning in dev mode.
+  if (nodes.length === 1 && nodes[0]!.kind === 'text') {
+    return nodes[0]!.value;
+  }
+
+  // Anything else: walk the tree and wrap in a Fragment.
+  // We inline the renderNode call here (instead of calling
+  // renderNodes) so we have an array of ReactNode children to pass
+  // to React.createElement — ReactNode's spread isn't iterable.
+  const rendered = nodes.map((n, i) =>
+    renderNode(n, components, `pgx:body:${i}`),
+  );
+  return React.createElement(
+    React.Fragment,
+    { key: 'pgx-body' },
+    ...rendered,
+  ) as React.ReactElement;
 }

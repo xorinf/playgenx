@@ -1,6 +1,6 @@
 {
   "name": "@playgenx/renderer",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "description": "Parse a TSX/HTML artifact body into a normalised tree and render it against a registry of React 19 components. Bridge between the SDK pipeline and the playground iframe.",
   "type": "module",
   "main": "./dist/index.mjs",

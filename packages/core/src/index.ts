@@ -79,3 +79,74 @@ export {
   flashcardsPrompt,
   labPrompt,
 } from '@playgenx/prompts';
+
+// v0.5: optional React-side rendering. The renderer + components
+// packages are peer deps (not bundled) so backend-only consumers
+// don't pull React into their bundle. Importing these from the
+// umbrella is a convenience for full-stack consumers; backend
+// consumers can stay on `playgenx` alone. When you import these
+// from `playgenx`, React must be in the host's dependency tree
+// (it's declared as a peer dep on the umbrella).
+//
+// The renderer does NOT use `new Function(string)` to evaluate
+// expressions — TSX expression positions become inert
+// `RenderExpression` placeholders that string-stringify at render
+// time. This keeps viBe's CSP-compliant default (no `'unsafe-eval'`)
+// working: their iframe tree can use @playgenx/renderer without
+// needing a CSP allowance change.
+//
+// Inlined re-export: we import from the package entry points and
+// re-export, so consumers can install only the umbrella plus React
+// to render their artifacts.
+export { renderBody, renderNodes, renderNode, RenderExpression, propToSource } from '@playgenx/renderer';
+export type {
+  RendererNode,
+  RendererElement,
+  RendererText,
+  RendererFallthrough,
+  ParsedProp,
+  PropKind,
+  ComponentMap,
+  RenderInputProps,
+  RenderBodyOptions,
+} from '@playgenx/renderer';
+export {
+  Button,
+  TextField,
+  Slider,
+  Chart,
+  Container,
+  Code,
+  Heading,
+  Text,
+  Stepper,
+  Card,
+  List,
+  componentMap,
+  type ButtonProps,
+  type TextFieldProps,
+  type SliderProps,
+  type ChartProps,
+  type ChartKind,
+  type ContainerProps,
+  type CodeProps,
+  type HeadingProps,
+  type TextProps,
+  type StepperProps,
+  type Step,
+  type CardProps,
+  type ListProps,
+  type ComponentMapKey,
+} from '@playgenx/components';
+export {
+  StorageProvider,
+  StorageContext,
+  useStorage,
+  useStorageContext,
+  useSaveArtifact,
+  useListedArtifacts,
+  useStoredArtifact,
+  useDeleteArtifact,
+  type StorageProviderProps,
+  type HookResult,
+} from '@playgenx/storage-react';
