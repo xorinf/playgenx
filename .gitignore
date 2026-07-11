@@ -40,3 +40,8 @@ yarn-error.log*
 
 # Hermes agent state — plans, skill state, agent working dirs
 .hermes/
+
+# In-progress planning notes (research dumps, TODO, brainstorms)
+# Files here are not intended for commit; pick up the durable conclusions and
+# promote them into the package source or docs/ instead.
+/do/
