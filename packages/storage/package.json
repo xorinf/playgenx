@@ -17,6 +17,10 @@
     "./http": {
       "types": "./dist/adapters/http.d.mts",
       "import": "./dist/adapters/http.mjs"
+    },
+    "./s3": {
+      "types": "./dist/adapters/s3.d.mts",
+      "import": "./dist/adapters/s3.mjs"
     }
   },
   "files": [
@@ -31,7 +35,8 @@
     "entry": [
       "src/index.ts",
       "src/adapters/local.ts",
-      "src/adapters/http.ts"
+      "src/adapters/http.ts",
+      "src/adapters/s3.ts"
     ],
     "format": [
       "esm"
@@ -70,7 +75,14 @@
   "peerDependencies": {
     "typescript": "^5.6.0 || ^6.0.0"
   },
+  "peerDependenciesMeta": {
+    "@aws-sdk/client-s3": {
+      "optional": true
+    }
+  },
   "devDependencies": {
-    "@playgenx/types": "workspace:*"
+    "@aws-sdk/client-s3": "^3.1085.0",
+    "@playgenx/types": "workspace:*",
+    "@types/node": "^22.0.0"
   }
 }

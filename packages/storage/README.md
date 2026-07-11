@@ -32,7 +32,8 @@ const http = new HttpAdapter({ baseUrl: 'https://api.example.com' });
 | Adapter | Path | Backend | Notes |
 |---|---|---|---|
 | `local` | `@playgenx/storage/local` (or `createStorage('local')`) | browser `localStorage` | Default. No deps. ~5MB quota. |
-| `http` | `@playgenx/storage/http` (or `createStorage('http', { baseUrl })`) | Any REST API | Opaque URL shape. Server owns schema + auth. |
+| `http` | `@playgenx/storage/http` (or `createStorage('http')`) | Any REST API | Opaque URL shape. Server owns schema + auth. |
+| `s3` | `@playgenx/storage/s3` (or `createStorage('s3')`) | AWS S3 (or any S3-compatible: R2, MinIO, LocalStack) | Brings `@aws-sdk/client-s3` (peerDependenciesMeta.optional). |
 
 ## Contract
 
