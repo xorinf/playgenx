@@ -15,13 +15,7 @@ export type {
 } from './storage-types.js';
 
 /** Kinds of educational artifacts PlayGenX can produce. */
-export type ArtifactKind =
-  | 'playground'
-  | 'poll'
-  | 'quiz'
-  | 'simulation'
-  | 'flashcards'
-  | 'lab';
+export type ArtifactKind = 'playground' | 'poll' | 'quiz' | 'simulation' | 'flashcards' | 'lab';
 
 /** Input to artifact generation: lecture context plus the target kind. */
 export interface ArtifactRequest {
@@ -66,6 +60,23 @@ export interface Artifact {
    * not the fingerprint).
    */
   readonly promptFingerprint?: string;
+  /**
+   * Token usage reported by the provider. Not every provider returns
+   * token counts; when omitted, downstream cost accounting sees
+   * `usage: undefined` and skips the pricing step.
+   */
+  readonly usage?: TokenUsage;
+  /**
+   * Estimated cost in USD, computed from `usage` and the active
+   * pricing table. Zero when the provider has no entry in the table.
+   */
+  readonly costUsd?: number;
+}
+
+/** Token usage block on a completed generation. */
+export interface TokenUsage {
+  readonly inputTokens: number;
+  readonly outputTokens: number;
 }
 
 /** Pipeline stage that produced an error. */
@@ -151,17 +162,60 @@ export interface ProviderCompleteOptions {
 }
 
 /**
+ * A successful response from a {@link Provider.complete} call.
+ *
+ * Replaces the v0.1.x–v0.3.x contract of returning a bare `string`.
+ * Wrapping the body in an object lets providers report optional
+ * metadata (token usage today; latency, finish reason, model-version
+ * tomorrow) without forcing a side-channel, and gives the SDK a
+ * structured handle to attach per-call instrumentation.
+ *
+ * Breaking change vs v0.3.x: provider authors must wrap the body in
+ * `{ body }`. Built-in providers (MockProvider, OpenAIProvider) are
+ * updated. Third-party providers that still return `string` will fail
+ * TypeScript compilation, making the migration loud.
+ */
+export interface ProviderResult {
+  /**
+   * The raw model response. May include surrounding prose, fences, or
+   * other LLM artifacts — the parser/validator handle cleanup.
+   */
+  readonly body: string;
+  /**
+   * Token usage reported by the provider. Optional because not every
+   * provider returns counts (e.g. MockProvider doesn't, ollama may
+   * not). When omitted, downstream cost accounting sees
+   * `usage: undefined` and skips the pricing step.
+   */
+  readonly usage?: TokenUsage;
+  /**
+   * Why the model stopped generating. Mirrors OpenAI's `finish_reason`
+   * (`'stop'`, `'length'`, `'tool_calls'`, …). The pipeline uses this
+   * only for telemetry today; future versions may branch on it (e.g.
+   * auto-retry on `length`).
+   */
+  readonly finishReason?: string;
+}
+
+/**
  * Shared LLM provider contract.
  *
  * Every concrete provider (OpenAI, Gemini, Anthropic, Ollama, ...) implements
  * this. The core SDK never imports a provider implementation directly; it asks
  * for a `Provider` via dependency injection.
+ *
+ * v0.4 contract change: `complete()` returns a {@link ProviderResult} rather
+ * than a bare `string`. Providers that don't track usage can return
+ * `{ body: <text> }`. The structured result eliminates the v0.4-rc side
+ * channel (a global `Map<string, TokenUsage>` keyed by response body) that
+ * silently dropped usage whenever the parser mutated the body — see the
+ * integrity audit notes in `generate.ts`.
  */
 export interface Provider {
   /** Stable identifier, e.g. `mock`, `openai`, `ollama`. */
   readonly id: string;
   /** Default model to use if the caller does not override. */
   readonly defaultModel: string;
-  /** Send a prompt to the model and return the raw response text. */
-  complete(prompt: string, options?: ProviderCompleteOptions): Promise<string>;
+  /** Send a prompt to the model and return the raw response. */
+  complete(prompt: string, options?: ProviderCompleteOptions): Promise<ProviderResult>;
 }

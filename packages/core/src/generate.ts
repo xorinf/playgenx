@@ -1,12 +1,16 @@
 import { extractArtifact } from '@playgenx/parser';
 import { DEFAULT_REGISTRY, type Registry } from '@playgenx/registry';
-import { sha256Hex } from '@playgenx/utils';
+import { sha256Hex, utf8ByteLength } from '@playgenx/utils';
 import { validateForKind } from '@playgenx/validators';
+import { estimateCostFor } from '@playgenx/providers';
+import { getTracer, NOOP_SPAN, type OTelSpanLike } from '@playgenx/observability';
 import type {
   ArtifactErrorCode,
   ArtifactRequest,
   ArtifactResult,
   Provider,
+  ProviderResult,
+  TokenUsage,
 } from '@playgenx/types';
 
 const DEFAULT_MAX_RESPONSE_BYTES = 200_000; // 200 KB
@@ -49,7 +53,10 @@ export function isTransientProviderError(err: unknown): boolean {
   // AbortError from a user-provided AbortSignal IS transient (the user
   // can retry once they un-abort). But our OWN timeout abort (which we
   // identify by attaching a marker) is NOT.
-  if (err.name === 'AbortError' && !(err as Error & { __playgenxTimeout?: boolean }).__playgenxTimeout) {
+  if (
+    err.name === 'AbortError' &&
+    !(err as Error & { __playgenxTimeout?: boolean }).__playgenxTimeout
+  ) {
     return true;
   }
   return false;
@@ -146,6 +153,13 @@ export interface GenerateOptions {
    * 250ms.
    */
   readonly retryBaseMs?: number;
+  /**
+   * How many times to retry the *provider call* if the validator
+   * rejects the body, each time appending the validator's message
+   * to the prompt. Defaults to 1 (the v0.4 P0 default). Set to 0 to
+   * disable the correction loop.
+   */
+  readonly maxValidationRetries?: number;
 }
 
 /**
@@ -171,17 +185,47 @@ async function runPipeline(
 
   let raw: string | undefined;
   let lastErr: unknown;
+  let lastUsage: TokenUsage | undefined;
+  let totalAttempts = 0;
+  const tracer = getTracer();
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    totalAttempts++;
+    const span: OTelSpanLike = tracer
+      ? tracer.startSpan('gen_ai.chat', {
+          attributes: {
+            'gen_ai.system': options.provider.id,
+            'gen_ai.request.model': options.model ?? options.provider.defaultModel,
+            'gen_ai.operation.name': 'generate',
+          },
+        })
+      : NOOP_SPAN;
     try {
-      raw = await options.provider.complete(prompt, {
+      const result = await options.provider.complete(prompt, {
         model: options.model,
         maxTokens: options.maxTokens,
         timeoutMs: timeoutMs > 0 ? timeoutMs : undefined,
       });
+      raw = result.body;
+      lastUsage = result.usage;
       lastErr = undefined;
+      span.setStatus({ code: 'ok' });
+      span.end();
       break;
     } catch (err) {
       lastErr = err;
+      span.recordException(err);
+      // Clamp the message to 4 KB. OTel exporters (OTLP, Jaeger) reject
+      // attribute values over their per-attribute limits, and a model
+      // error message can be unboundedly long. The truncation marker
+      // keeps it grep-able.
+      const rawMsg = err instanceof Error ? err.message : String(err);
+      const SPAN_MSG_MAX = 4_000;
+      const spanMsg =
+        rawMsg.length > SPAN_MSG_MAX
+          ? `${rawMsg.slice(0, SPAN_MSG_MAX)}…[truncated]`
+          : rawMsg;
+      span.setStatus({ code: 'error', message: spanMsg });
+      span.end();
       if (!isTransientProviderError(err) || attempt >= maxRetries) break;
       // Exponential backoff with up to 25% jitter.
       const base = retryBaseMs * Math.pow(2, attempt);
@@ -192,15 +236,30 @@ async function runPipeline(
   }
 
   if (raw === undefined) {
+    const lastWasTimeout =
+      lastErr !== null && lastErr !== undefined && (lastErr as Error & { __playgenxTimeout?: boolean }).__playgenxTimeout;
+    // Distinguish "we tried N times and gave up" (RETRIES_EXHAUSTED)
+    // from "the provider told us no" (PROVIDER_ERROR). Without this
+    // split, callers can't tell whether to surface "please retry" UX
+    // vs "your request was rejected" UX — the latter usually means a
+    // config error (bad API key, wrong model name) that retrying won't
+    // fix.
+    //
+    // Heuristic: if the last error was transient AND we hit the
+    // retry cap, emit RETRIES_EXHAUSTED. Permanent failures and
+    // immediate aborts (timeout on first attempt) stay PROVIDER_ERROR.
+    const wasLastErrorTransient = lastErr ? isTransientProviderError(lastErr) : false;
+    const exhaustedRetries = wasLastErrorTransient && totalAttempts >= maxRetries + 1;
     return {
       ok: false,
       error: {
         kind: request.kind,
         providerId: options.provider.id,
         stage: 'provider',
-        code:
-          lastErr && (lastErr as Error & { __playgenxTimeout?: boolean }).__playgenxTimeout
-            ? 'TIMEOUT'
+        code: lastWasTimeout
+          ? 'TIMEOUT'
+          : exhaustedRetries
+            ? 'RETRIES_EXHAUSTED'
             : 'PROVIDER_ERROR',
         message: lastErr instanceof Error ? lastErr.message : String(lastErr),
       },
@@ -212,16 +271,31 @@ async function runPipeline(
   //    boundary inside the budget so the parser still has a chance to
   //    find a balanced pair. If no fence fits, we add a closing fence
   //    ourselves.
+  //
+  //    NOTE: maxResponseBytes is a UTF-8 byte budget, not a UTF-16
+  //    code-unit budget. We use `utf8ByteLength` rather than
+  //    `raw.length` because emoji and other supplementary-plane
+  //    characters would otherwise push `length` over the cap while
+  //    `byteLength` is still well under it. See M4 in the integrity
+  //    audit notes.
   const maxBytes = options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES;
   let processed = raw;
   let truncated = false;
-  if (maxBytes > 0 && raw.length > maxBytes) {
+  if (maxBytes > 0 && utf8ByteLength(raw) > maxBytes) {
     processed = truncateWithFenceAwareness(raw, maxBytes);
     truncated = true;
   }
 
   // 3) Parse.
+  const extractSpan: OTelSpanLike = tracer
+    ? tracer.startSpan('pgx.extract', { attributes: { 'pgx.kind': request.kind } })
+    : NOOP_SPAN;
   const parsed = extractArtifact(processed);
+  extractSpan.setStatus({
+    code: parsed.ok ? 'ok' : 'error',
+    message: parsed.ok ? undefined : parsed.error.message,
+  });
+  extractSpan.end();
   if (!parsed.ok) {
     return {
       ok: false,
@@ -238,39 +312,127 @@ async function runPipeline(
 
   // 4) Validate. Use the kind-specific validator by default so JSON
   //    kinds get shape checks; allow callers to plug in their own.
-  if (options.validate) {
-    const validationError = options.validate(parsed.body);
-    if (validationError !== null) {
-      return {
-        ok: false,
-        error: {
-          kind: request.kind,
-          providerId: options.provider.id,
-          stage: 'validate',
-          code: 'INVALID_JSON_SHAPE',
-          message: validationError,
-        },
-      };
+  //
+  //    Auto-retry-with-correction: when the validator returns an
+  //    error and `maxValidationRetries > 0`, we call the provider
+  //    once more with the validator's message appended to the prompt.
+  //    Default is 1 retry, matching the P0 in the v0.4 roadmap.
+  const maxValidationRetries = options.maxValidationRetries ?? 1;
+  let validation: { ok: true } | { ok: false; message: string } = { ok: true };
+  let validationErr: { message: string; line?: number } | null = null;
+  let attemptCount = 0;
+  // We need a mutable closure over `parsed` for the retry loop.
+  let currentBody = parsed.body;
+  // Thread usage from the most recent successful provider call
+  // forward. When validation retries, the retry call overwrites
+  // these; on success we use whichever call produced the accepted
+  // body.
+  //
+  // finishReason is intentionally captured only for telemetry —
+  // surfaced via the OTel span below, not stored on the Artifact.
+  // Adding it to the public Artifact type would expand the public
+  // surface area for marginal value; revisit if callers ask.
+  let currentUsage: TokenUsage | undefined = lastUsage;
+  // `bodyId` and `promptFp` are computed from the FINAL accepted body.
+  let lastPrompt = prompt;
+  for (; attemptCount <= maxValidationRetries; attemptCount++) {
+    const validateSpan: OTelSpanLike = tracer
+      ? tracer.startSpan('pgx.validate', { attributes: { 'pgx.kind': request.kind } })
+      : NOOP_SPAN;
+    if (options.validate) {
+      const msg = options.validate(currentBody);
+      if (msg === null) {
+        validation = { ok: true };
+        validateSpan.setStatus({ code: 'ok' });
+        validateSpan.end();
+        break;
+      }
+      validation = { ok: false, message: msg };
+      validationErr = { message: msg };
+      validateSpan.setStatus({ code: 'error', message: msg });
+      validateSpan.end();
+    } else {
+      const registry = options.registry ?? DEFAULT_REGISTRY;
+      const built = validateForKind(request.kind, currentBody, registry, {
+        skipJsxCheck: options.skipJsxCheck,
+        skipJsonCheck: options.skipJsonCheck,
+      });
+      if (!built) {
+        validation = { ok: true };
+        validateSpan.setStatus({ code: 'ok' });
+        validateSpan.end();
+        break;
+      }
+      validation = { ok: false, message: built.message };
+      validationErr = { message: built.message, line: built.line };
+      validateSpan.setStatus({ code: 'error', message: built.message });
+      validateSpan.end();
     }
-  } else {
-    const registry = options.registry ?? DEFAULT_REGISTRY;
-    const built = validateForKind(request.kind, parsed.body, registry, {
-      skipJsxCheck: options.skipJsxCheck,
-      skipJsonCheck: options.skipJsonCheck,
-    });
-    if (built) {
-      return {
-        ok: false,
-        error: {
-          kind: request.kind,
-          providerId: options.provider.id,
-          stage: 'validate',
-          code: validatorErrorCode(built.message),
-          message: built.message,
-          line: built.line,
-        },
-      };
+    // If we have retries left, ask the provider to try again with
+    // the validator message appended. Continue the loop with the
+    // new body.
+    if (attemptCount < maxValidationRetries) {
+      const retrySpan: OTelSpanLike = tracer
+        ? tracer.startSpan('gen_ai.chat', {
+            attributes: {
+              'gen_ai.system': options.provider.id,
+              'gen_ai.request.model': options.model ?? options.provider.defaultModel,
+              'gen_ai.operation.name': 'generate.retry',
+              'pgx.retry.reason': 'validator',
+            },
+          })
+        : NOOP_SPAN;
+      const correctionPrompt =
+        lastPrompt +
+        '\n\n[Validator feedback — your previous response was rejected. ' +
+        'Please fix and return again]:\n' +
+        validationErr.message;
+      try {
+        const retryResult: ProviderResult = await options.provider.complete(correctionPrompt, {
+          model: options.model,
+          maxTokens: options.maxTokens,
+          timeoutMs: timeoutMs > 0 ? timeoutMs : undefined,
+        });
+        const retried = retryResult.body;
+        // Truncate to the same UTF-8 byte cap as the initial response.
+        // See M4 in the integrity audit notes.
+        const truncated =
+          maxBytes > 0 && utf8ByteLength(retried) > maxBytes
+            ? truncateWithFenceAwareness(retried, maxBytes)
+            : retried;
+        const reParsed = extractArtifact(truncated);
+        retrySpan.setStatus({ code: reParsed.ok ? 'ok' : 'error' });
+        retrySpan.end();
+        if (!reParsed.ok) {
+          // Give up — surface the original validation error.
+          break;
+        }
+        currentBody = reParsed.body;
+        // Only adopt the retry's usage when the retry body is the one
+        // we're going to ship. If validation later rejects this too and
+        // we don't get to attempt N+1, the failure path stays decoupled
+        // from the provider metadata.
+        currentUsage = retryResult.usage;
+        lastPrompt = correctionPrompt;
+      } catch {
+        retrySpan.setStatus({ code: 'error' });
+        retrySpan.end();
+        break;
+      }
     }
+  }
+  if (!validation.ok) {
+    return {
+      ok: false,
+      error: {
+        kind: request.kind,
+        providerId: options.provider.id,
+        stage: 'validate',
+        code: validatorErrorCode(validationErr?.message ?? 'unknown'),
+        message: validationErr?.message ?? 'validation failed',
+        line: validationErr?.line,
+      },
+    };
   }
 
   // 5) Success. If we truncated, surface a warning so callers know
@@ -282,18 +444,37 @@ async function runPipeline(
   //    validator. Both are optional on `Artifact`; we attach them
   //    on every successful generation so consumers never have to
   //    branch on `if (result.artifact.id)`.
-  const bodyId = await sha256Hex(`${request.kind}|${options.provider.id}|${parsed.body}`);
-  const promptFp = await sha256Hex(`${request.kind}|${request.context}|${request.concept}|${prompt}`);
+  //
+  //    v0.4: also attach `usage` (when the provider supplied token
+  //    counts) and `costUsd` (computed from the pricing table).
+  //
+  //    `currentUsage` is threaded through the validation retry loop
+  //    so it survives parsing and truncation. The previous
+  //    implementation looked up usage via a global Map keyed by the
+  //    raw response body — which silently returned `undefined`
+  //    whenever the parser trimmed or mutated the body (the canonical
+  //    fenced-code-block case). See integrity-audit notes for C1.
+  const bodyId = await sha256Hex(`${request.kind}|${options.provider.id}|${currentBody}`);
+  const promptFp = await sha256Hex(
+    `${request.kind}|${request.context}|${request.concept}|${prompt}`,
+  );
+  const finalModel = options.model ?? options.provider.defaultModel;
+  const finalCost =
+    currentUsage && finalModel ? estimateCostFor(finalModel, currentUsage) : undefined;
   return {
     ok: true,
     artifact: {
       kind: request.kind,
-      body: parsed.body,
+      body: currentBody,
       providerId: options.provider.id,
-      model: options.model ?? options.provider.defaultModel,
+      model: finalModel,
       id: bodyId,
       promptFingerprint: promptFp,
-      ...(truncated ? { warning: 'Response was truncated by maxResponseBytes; artifact may be incomplete.' } : {}),
+      ...(currentUsage ? { usage: currentUsage } : {}),
+      ...(finalCost !== undefined ? { costUsd: finalCost } : {}),
+      ...(truncated
+        ? { warning: 'Response was truncated by maxResponseBytes; artifact may be incomplete.' }
+        : {}),
     },
   };
 }
@@ -357,6 +538,16 @@ async function loadPrompts(): Promise<typeof import('@playgenx/prompts')> {
  *      a truncation marker INSIDE the fence (so the parser sees it).
  *   4. Otherwise, fall back to cutting at the budget and inserting a
  *      closing fence + marker.
+ *
+ * The `maxBytes` budget is in UTF-8 bytes, but the inner `slice` and
+ * index operations work in UTF-16 code units. This is an intentional
+ * approximation: when we get here we're already past the byte cap and
+ * the goal is to produce something the parser can extract, not to
+ * hit the byte cap exactly. Over-truncating (which is what code-unit
+ * slicing does on strings with supplementary-plane characters) is the
+ * safer outcome — the truncation marker is appended regardless. The
+ * outer byte-length check (in `runPipeline`) is what decides whether
+ * truncation is needed at all; that one is exact.
  */
 function truncateWithFenceAwareness(raw: string, maxBytes: number): string {
   const FENCE_LEN = 3; // ```
@@ -415,14 +606,10 @@ export async function generatePoll(
   request: ArtifactRequest,
   options: GenerateOptions,
 ): Promise<ArtifactResult> {
-  return runPipeline(
-    { ...request, kind: 'poll' },
-    options,
-    async (req) => {
-      const prompts = await loadPrompts();
-      return prompts.pollPrompt(req);
-    },
-  );
+  return runPipeline({ ...request, kind: 'poll' }, options, async (req) => {
+    const prompts = await loadPrompts();
+    return prompts.pollPrompt(req);
+  });
 }
 
 /**
@@ -435,14 +622,10 @@ export async function generateQuiz(
   request: ArtifactRequest,
   options: GenerateOptions,
 ): Promise<ArtifactResult> {
-  return runPipeline(
-    { ...request, kind: 'quiz' },
-    options,
-    async (req) => {
-      const prompts = await loadPrompts();
-      return prompts.quizPrompt(req);
-    },
-  );
+  return runPipeline({ ...request, kind: 'quiz' }, options, async (req) => {
+    const prompts = await loadPrompts();
+    return prompts.quizPrompt(req);
+  });
 }
 
 /**
@@ -470,14 +653,10 @@ export async function generateFlashcards(
   request: ArtifactRequest,
   options: GenerateOptions,
 ): Promise<ArtifactResult> {
-  return runPipeline(
-    { ...request, kind: 'flashcards' },
-    options,
-    async (req) => {
-      const prompts = await loadPrompts();
-      return prompts.flashcardsPrompt(req);
-    },
-  );
+  return runPipeline({ ...request, kind: 'flashcards' }, options, async (req) => {
+    const prompts = await loadPrompts();
+    return prompts.flashcardsPrompt(req);
+  });
 }
 
 /**

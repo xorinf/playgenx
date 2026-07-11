@@ -1,4 +1,9 @@
-import type { Provider, ProviderCompleteOptions } from '@playgenx/types';
+import type {
+  Provider,
+  ProviderCompleteOptions,
+  ProviderResult,
+  TokenUsage,
+} from '@playgenx/types';
 
 /**
  * Thrown by {@link OpenAIProvider} on any failure.
@@ -73,6 +78,10 @@ interface ChatCompletionResponse {
     finish_reason?: string;
     message?: { content?: string };
   }[];
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+  };
 }
 
 const DEFAULT_BASE_URL = 'https://api.openai.com';
@@ -115,7 +124,7 @@ export class OpenAIProvider implements Provider {
     this.systemPrompt = options.systemPrompt;
   }
 
-  async complete(prompt: string, options?: ProviderCompleteOptions): Promise<string> {
+  async complete(prompt: string, options?: ProviderCompleteOptions): Promise<ProviderResult> {
     const apiKey = this.apiKey ?? process.env.OPENAI_API_KEY;
     if (!apiKey) {
       throw new OpenAIError(
@@ -157,13 +166,18 @@ export class OpenAIProvider implements Provider {
     apiKey: string,
     body: ChatCompletionRequest,
     timeoutMs: number,
-  ): Promise<never> {
+  ): Promise<ProviderResult> {
     let lastError: OpenAIError | undefined;
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
       try {
         return await this.attemptOnce(url, apiKey, body, timeoutMs);
       } catch (err) {
-        if (err instanceof OpenAIError && err.status !== undefined && RETRYABLE_STATUSES.has(err.status) && attempt < this.maxRetries) {
+        if (
+          err instanceof OpenAIError &&
+          err.status !== undefined &&
+          RETRYABLE_STATUSES.has(err.status) &&
+          attempt < this.maxRetries
+        ) {
           lastError = err;
           const delay = this.backoffMs(attempt);
           await sleep(delay);
@@ -188,7 +202,7 @@ export class OpenAIProvider implements Provider {
     apiKey: string,
     body: ChatCompletionRequest,
     timeoutMs: number,
-  ): Promise<string> {
+  ): Promise<ProviderResult> {
     const ac = new AbortController();
     const timer = timeoutMs > 0 ? setTimeout(() => ac.abort(), timeoutMs) : null;
 
@@ -223,7 +237,8 @@ export class OpenAIProvider implements Provider {
 
     if (!response.ok) {
       const raw = await response.text().catch(() => '');
-      const snippet = raw.length > MAX_ERROR_BODY_CHARS ? `${raw.slice(0, MAX_ERROR_BODY_CHARS)}…` : raw;
+      const snippet =
+        raw.length > MAX_ERROR_BODY_CHARS ? `${raw.slice(0, MAX_ERROR_BODY_CHARS)}…` : raw;
       throw new OpenAIError(`OpenAI request failed (HTTP ${response.status}): ${snippet}`, {
         status: response.status,
       });
@@ -245,17 +260,35 @@ export class OpenAIProvider implements Provider {
       throw new OpenAIError('OpenAI response missing choices[0].message.content');
     }
     // Surface truncation: if the model hit the token limit, the body
-    // might be incomplete. Warn via the message — we still return the
-    // content, but the caller can choose to retry or report a partial
-    // artifact.
+    // might be incomplete. Append a marker INSIDE the content so the
+    // parser still sees a complete string; the SDK's truncation step
+    // (in `runPipeline`) applies a separate byte cap.
+    //
+    // Return the structured `ProviderResult` directly — no side
+    // channel, no global Map. The pipeline reads `usage` off the
+    // result without ever needing to look up by string identity.
     if (choice.finish_reason === 'length') {
-      // Append a marker so the caller can detect truncation. The
-      // validator/parser may or may not catch this depending on the
-      // kind — surfacing the signal here is enough.
-      return content + '\n/* [playgenx: response was truncated by the model] */';
+      return {
+        body: content + '\n/* [playgenx: response was truncated by the model] */',
+        usage: usageFrom(data),
+        finishReason: choice.finish_reason,
+      };
     }
-    return content;
+    return {
+      body: content,
+      usage: usageFrom(data),
+      finishReason: choice.finish_reason,
+    };
   }
+}
+
+function usageFrom(data: ChatCompletionResponse): TokenUsage {
+  const u = data.usage;
+  if (!u) return { inputTokens: 0, outputTokens: 0 };
+  return {
+    inputTokens: typeof u.prompt_tokens === 'number' ? u.prompt_tokens : 0,
+    outputTokens: typeof u.completion_tokens === 'number' ? u.completion_tokens : 0,
+  };
 }
 
 function sleep(ms: number): Promise<void> {
