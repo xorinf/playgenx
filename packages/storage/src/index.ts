@@ -38,18 +38,9 @@ import { S3Adapter as S3AdapterImpl, type S3AdapterOptions } from './adapters/s3
  * concrete `ArtifactStorage` whose typing depends on the chosen
  * adapter's options.
  */
-export function createStorage(
-  which: 'local',
-  options?: LocalAdapterOptions,
-): LocalAdapterImpl;
-export function createStorage(
-  which: 'http',
-  options: HttpAdapterOptions,
-): HttpAdapterImpl;
-export function createStorage(
-  which: 's3',
-  options: S3AdapterOptions,
-): S3AdapterImpl;
+export function createStorage(which: 'local', options?: LocalAdapterOptions): LocalAdapterImpl;
+export function createStorage(which: 'http', options: HttpAdapterOptions): HttpAdapterImpl;
+export function createStorage(which: 's3', options: S3AdapterOptions): S3AdapterImpl;
 export function createStorage(
   which: 'local' | 'http' | 's3',
   options?: LocalAdapterOptions | HttpAdapterOptions | S3AdapterOptions,

@@ -169,7 +169,9 @@ describe('useListedArtifacts', () => {
       const [k, setK] = React.useState<'playground' | 'poll' | undefined>(undefined);
       return (
         <>
-          <button type="button" onClick={() => setK('playground')}>filter playground</button>
+          <button type="button" onClick={() => setK('playground')}>
+            filter playground
+          </button>
           <Comp kindFilter={k} />
         </>
       );
@@ -217,9 +219,7 @@ describe('useListedArtifacts', () => {
         <Comp />
       </StorageProvider>,
     );
-    await waitFor(() =>
-      expect(screen.getByTestId('error').textContent).toBe('boom!'),
-    );
+    await waitFor(() => expect(screen.getByTestId('error').textContent).toBe('boom!'));
     expect(screen.getByTestId('loading').textContent).toBe('false');
   });
 });
@@ -242,9 +242,7 @@ describe('useStoredArtifact', () => {
         <Comp />
       </StorageProvider>,
     );
-    await waitFor(() =>
-      expect(screen.getByTestId('body').textContent).toBe('specific'),
-    );
+    await waitFor(() => expect(screen.getByTestId('body').textContent).toBe('specific'));
     expect(screen.getByTestId('loading').textContent).toBe('false');
   });
 

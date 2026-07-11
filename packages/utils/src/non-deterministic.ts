@@ -33,15 +33,7 @@
  * prompt to also drop it from its suggestion list.
  */
 
-const FORBIDDEN = [
-  'Math',
-  'Date',
-  'window',
-  'globalThis',
-  'self',
-  'process',
-  'crypto',
-] as const;
+const FORBIDDEN = ['Math', 'Date', 'window', 'globalThis', 'self', 'process', 'crypto'] as const;
 
 /**
  * Scan `body` for forbidden tokens. Returns the first one (in the
@@ -71,13 +63,15 @@ export function findNonDeterministic(body: string): string | null {
 }
 
 function isTokenBoundary(body: string, idx: number, len: number): boolean {
-  const before = idx === 0 ? '' : body[idx - 1] ?? '';
+  const before = idx === 0 ? '' : (body[idx - 1] ?? '');
   const after = body[idx + len] ?? '';
   // Word boundary: not preceded or followed by an alphanumeric char.
   // We deliberately treat `-` as a boundary too so that English
   // compound words (e.g. `self-contained`, `Math-related`) don't
   // false-positive as identifiers.
-  return !isIdentChar(before) && !isIdentChar(after) && !isBoundaryChar(before) && !isBoundaryChar(after);
+  return (
+    !isIdentChar(before) && !isIdentChar(after) && !isBoundaryChar(before) && !isBoundaryChar(after)
+  );
 }
 
 function isIdentChar(c: string): boolean {

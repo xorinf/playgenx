@@ -16,7 +16,12 @@ Wrap your tree in `<StorageProvider>` once, then call the hooks anywhere beneath
 
 ```tsx
 import { LocalAdapter } from '@playgenx/storage';
-import { StorageProvider, useSaveArtifact, useListedArtifacts, useDeleteArtifact } from '@playgenx/storage-react';
+import {
+  StorageProvider,
+  useSaveArtifact,
+  useListedArtifacts,
+  useDeleteArtifact,
+} from '@playgenx/storage-react';
 
 function Library() {
   const { artifacts, refresh, loading } = useListedArtifacts();
@@ -25,18 +30,26 @@ function Library() {
 
   return (
     <>
-      <button onClick={async () => {
-        const r = await save({ artifact: { /* ... */ } as any });
-        if (r.ok) refresh();
-      }}>save</button>
+      <button
+        onClick={async () => {
+          const r = await save({ artifact: {/* ... */} as any });
+          if (r.ok) refresh();
+        }}
+      >
+        save
+      </button>
       <ul>
         {artifacts.map((a) => (
           <li key={a.id}>
             {a.artifact.kind} · {a.artifact.body.slice(0, 24)}
-            <button onClick={async () => {
-              const r = await remove(a.id);
-              if (r.ok) refresh();
-            }}>delete</button>
+            <button
+              onClick={async () => {
+                const r = await remove(a.id);
+                if (r.ok) refresh();
+              }}
+            >
+              delete
+            </button>
           </li>
         ))}
       </ul>
@@ -55,14 +68,14 @@ function App() {
 
 ## Hooks
 
-| Hook | What it returns |
-|---|---|
-| `useStorage()` | The adapter (throws if no provider is mounted) |
-| `useStorageContext()` | The adapter or `null` (safe variant) |
-| `useSaveArtifact(override?)` | `(input) => Promise<HookResult<SaveResult>>` |
-| `useListedArtifacts({ kind?, limit?, newestFirst? })` | `{ artifacts, refresh, loading, error }` |
-| `useStoredArtifact(id, override?)` | `{ artifact, refresh, loading, error }` |
-| `useDeleteArtifact(override?)` | `(id) => Promise<HookResult<boolean>>` |
+| Hook                                                  | What it returns                                |
+| ----------------------------------------------------- | ---------------------------------------------- |
+| `useStorage()`                                        | The adapter (throws if no provider is mounted) |
+| `useStorageContext()`                                 | The adapter or `null` (safe variant)           |
+| `useSaveArtifact(override?)`                          | `(input) => Promise<HookResult<SaveResult>>`   |
+| `useListedArtifacts({ kind?, limit?, newestFirst? })` | `{ artifacts, refresh, loading, error }`       |
+| `useStoredArtifact(id, override?)`                    | `{ artifact, refresh, loading, error }`        |
+| `useDeleteArtifact(override?)`                        | `(id) => Promise<HookResult<boolean>>`         |
 
 The optional `override` parameter lets a single component bound to a non-provider adapter (rarely needed).
 

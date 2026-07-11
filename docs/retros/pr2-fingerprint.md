@@ -16,7 +16,7 @@ referencing `Math`, `Date`, `window`, `globalThis`, `self`,
 calls with the same input produced different `id`s because the
 body drifted. The fix was two-part: deterministic body fingerprints
 so the same input → same id, and a validator guard so a body
-couldn't *contain* a non-deterministic expression that would
+couldn't _contain_ a non-deterministic expression that would
 re-evaluate differently on each mount.
 
 **Bugs caught and fixed during the PR:**
@@ -37,14 +37,15 @@ re-evaluate differently on each mount.
    touch string contents.
 
 **Tests:** 35 new. 16 non-deterministic + 6 sha256 + 5 validator
-+ 8 core fingerprint pinning.
+
+- 8 core fingerprint pinning.
 
 **Bundle:** core dist grew from 17KB → 18KB gzipped. Validator
 dist grew from 1.01KB → 1.01KB.
 
 **Trade-off:** the validator rejects `self-contained` even as
 plain text content inside a string literal — because the JS
-parser sees the literal *before* the word boundary check
+parser sees the literal _before_ the word boundary check
 runs. String contents are masked by `stripJsComments`, but the
 literal token `self` outside the string is still checked.
 Verified via the new test cases.

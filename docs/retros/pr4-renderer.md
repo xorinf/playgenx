@@ -22,8 +22,8 @@ positions in the prompts) for 4.96KB gzipped. The parser is in
 
 ```ts
 type RendererNode =
-  | RendererElement  // PascalCase tag with parsed props + children
-  | RendererText      // string leaf
+  | RendererElement // PascalCase tag with parsed props + children
+  | RendererText // string leaf
   | RendererFallthrough; // malformed region, render as <pre>
 
 interface ParsedProp {
@@ -63,7 +63,7 @@ apps can style / suppress as they prefer.
    match `<button>`. Removed the lowercase.
 3. Slice indexing on the closing quote — value came out as
    `"Go` (missing trailing quote). Fixed by advancing cursor
-   past the closing quote *before* slicing.
+   past the closing quote _before_ slicing.
 4. `JSX.Element` namespace not found in `LibraryPanel.tsx` —
    switched return types to `ReactElement` with an explicit
    `import { type ReactElement }`.

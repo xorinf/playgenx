@@ -11,12 +11,7 @@
 
 import * as React from 'react';
 import type { ArtifactKind } from '@playgenx/types';
-import type {
-  ArtifactStorage,
-  SaveInput,
-  SaveResult,
-  StoredArtifact,
-} from '@playgenx/storage';
+import type { ArtifactStorage, SaveInput, SaveResult, StoredArtifact } from '@playgenx/storage';
 import { StorageContext } from './context.js';
 
 /** Discriminated result wrapper used by all hooks. */
@@ -63,8 +58,7 @@ export function useSaveArtifact(
       if (!adapter) {
         return {
           ok: false,
-          error:
-            'useSaveArtifact(): no <StorageProvider> mounted and no override adapter supplied',
+          error: 'useSaveArtifact(): no <StorageProvider> mounted and no override adapter supplied',
         };
       }
       try {
@@ -200,4 +194,3 @@ export function useDeleteArtifact(
     [adapter],
   );
 }
-

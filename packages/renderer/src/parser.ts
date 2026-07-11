@@ -295,11 +295,7 @@ function readProps(input: string, cursor: Cursor): ParsedProp[] {
   return out;
 }
 
-function readPropValue(
-  input: string,
-  cursor: Cursor,
-  propName: string,
-): ParsedProp | null {
+function readPropValue(input: string, cursor: Cursor, propName: string): ParsedProp | null {
   const n = input.length;
   if (cursor.index >= n) return null;
   const c = input.charCodeAt(cursor.index);

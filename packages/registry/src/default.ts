@@ -38,7 +38,11 @@ export const DEFAULT_COMPONENT_SCHEMAS: readonly ComponentSchema[] = [
     acceptsChildren: false,
     props: [
       { name: 'label', kind: 'string', required: true, hint: 'Visible button text.' },
-      { name: 'onClick', kind: 'node', hint: 'Handler. Ignored by the validator; renderer treats as a no-op.' },
+      {
+        name: 'onClick',
+        kind: 'node',
+        hint: 'Handler. Ignored by the validator; renderer treats as a no-op.',
+      },
       { name: 'disabled', kind: 'boolean' },
       { name: 'variant', kind: 'string', hint: '"primary" | "secondary" | "ghost"' },
     ],
@@ -85,9 +89,7 @@ export const DEFAULT_COMPONENT_SCHEMAS: readonly ComponentSchema[] = [
   {
     name: 'Code',
     acceptsChildren: true,
-    props: [
-      { name: 'language', kind: 'string' },
-    ],
+    props: [{ name: 'language', kind: 'string' }],
   },
   {
     name: 'Heading',

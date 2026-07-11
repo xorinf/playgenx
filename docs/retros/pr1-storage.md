@@ -40,7 +40,7 @@ the SDK pipeline.
 
 - `localStorage` max-entries eviction is FIFO at the index level,
   not LRU. Documented in code.
-- HTTP adapter has *no* schema assumptions — POST/GET/PATCH/
+- HTTP adapter has _no_ schema assumptions — POST/GET/PATCH/
   DELETE against `${baseUrl}${pathPrefix}/${id}`. Server owns
   auth + shape.
 - Failures resolve as `null` / `[]` / `false` rather than

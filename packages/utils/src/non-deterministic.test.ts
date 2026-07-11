@@ -62,35 +62,39 @@ describe('findNonDeterministic', () => {
   });
 
   it('does NOT match forbidden tokens inside a JS line comment', () => {
-    expect(check(`
+    expect(
+      check(`
       // We used Math.random() but it should be flagged-then-stripped.
       <div />
-    `)).toBeNull();
+    `),
+    ).toBeNull();
   });
 
   it('does NOT match forbidden tokens inside a JS block comment', () => {
-    expect(check(`
+    expect(
+      check(`
       /*
        * Note to self: never use Date.now() in a render.
        */
       <div />
-    `)).toBeNull();
+    `),
+    ).toBeNull();
   });
 
   it('flags forbidden tokens after a JS comment block ends', () => {
-    expect(check(`
+    expect(
+      check(`
       /*
        * OK above.
        */
       <div onClick={() => Math.random()} />
-    `)).toBe('Math');
+    `),
+    ).toBe('Math');
   });
 
   it('flags a forbidden token even when it occurs twice', () => {
     // First occurrence wins (ordering matches FORBIDDEN list).
-    expect(
-      check('<div onClick={() => { Date.now(); window.alert(1); }} />'),
-    ).toBe('Date');
+    expect(check('<div onClick={() => { Date.now(); window.alert(1); }} />')).toBe('Date');
   });
 
   it('returns null on an empty body', () => {

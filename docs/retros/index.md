@@ -24,32 +24,32 @@ org the user does not currently have (`@playgenx`).
 
 ## The eight commits
 
-| PR | Commit | One-liner |
-|---|---|---|
-| 1 | `8c9dafc` | ArtifactStorage contract + LocalAdapter + HttpAdapter |
-| 2 | `3d23d31` | Determinism fingerprints + NON_DETERMINISTIC_EXPR |
-| 3a | `d7c1801` | Prop-shape schema + jsx-props extractor |
-| 3b | `2fedbcf` | @playgenx/components (11 React 19 impls) |
-| 4 | `8a034b5` | @playgenx/renderer + Sandbox wiring |
-| 5 | `ee9add8` | @playgenx/storage-react + LibraryPanel UI |
-| 6 | `d69f50f` | S3Adapter via @aws-sdk/client-s3 |
-| 6b | `3d2c185` | pnpm-lock follow-up (SDK + @types/node) |
+| PR  | Commit    | One-liner                                             |
+| --- | --------- | ----------------------------------------------------- |
+| 1   | `8c9dafc` | ArtifactStorage contract + LocalAdapter + HttpAdapter |
+| 2   | `3d23d31` | Determinism fingerprints + NON_DETERMINISTIC_EXPR     |
+| 3a  | `d7c1801` | Prop-shape schema + jsx-props extractor               |
+| 3b  | `2fedbcf` | @playgenx/components (11 React 19 impls)              |
+| 4   | `8a034b5` | @playgenx/renderer + Sandbox wiring                   |
+| 5   | `ee9add8` | @playgenx/storage-react + LibraryPanel UI             |
+| 6   | `d69f50f` | S3Adapter via @aws-sdk/client-s3                      |
+| 6b  | `3d2c185` | pnpm-lock follow-up (SDK + @types/node)               |
 
 Per-PR notes: see `docs/retros/pr1-storage.md`,
 `docs/retros/pr2-fingerprint.md`, … `docs/retros/pr6-s3.md`.
 
 ## Test economy
 
-| Layer | Tests added | After-batch total |
-|---|---|---|
-| `@playgenx/storage` | +30 (incl. 9 S3) | 30 |
-| `@playgenx/utils` | +13 (non-det + sha256 + jsx-props) | 72 |
-| `@playgenx/validators` | +15 (5 prop-shape + 5 determinism) | 57 |
-| `@playgenx/components` | +39 | 39 |
-| `@playgenx/renderer` | +25 | 25 |
-| `@playgenx/storage-react` | +10 | 10 |
-| `playgenx` core | +8 (fingerprint pinning) | 49 |
-| **Net** | **+154** | **389** (12 packages) |
+| Layer                     | Tests added                        | After-batch total     |
+| ------------------------- | ---------------------------------- | --------------------- |
+| `@playgenx/storage`       | +30 (incl. 9 S3)                   | 30                    |
+| `@playgenx/utils`         | +13 (non-det + sha256 + jsx-props) | 72                    |
+| `@playgenx/validators`    | +15 (5 prop-shape + 5 determinism) | 57                    |
+| `@playgenx/components`    | +39                                | 39                    |
+| `@playgenx/renderer`      | +25                                | 25                    |
+| `@playgenx/storage-react` | +10                                | 10                    |
+| `playgenx` core           | +8 (fingerprint pinning)           | 49                    |
+| **Net**                   | **+154**                           | **389** (12 packages) |
 
 ## What's not shipped
 

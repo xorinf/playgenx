@@ -193,11 +193,7 @@ function reconstructSource(node: Extract<RendererNode, { kind: 'element' }>): st
     node.props.map((p) => ` ${p.name}=${propToSource(p)}`).join('') +
     (node.children.length === 0 ? ' />' : '>');
   const tail = node.children.length === 0 ? '' : `</${node.name}>`;
-  return (
-    head +
-    node.children.map(reconstructAll).join('') +
-    tail
-  );
+  return head + node.children.map(reconstructAll).join('') + tail;
 }
 
 function reconstructAll(n: RendererNode): string {
@@ -210,10 +206,7 @@ function reconstructAll(n: RendererNode): string {
  * Convenience: parse and render in one call. Skip the parse step if
  * you have already-parsed nodes.
  */
-export function renderBody(
-  body: string,
-  components: ComponentMap,
-): React.ReactNode {
+export function renderBody(body: string, components: ComponentMap): React.ReactNode {
   const nodes = parseBodyNodes(body);
   return renderNodes(nodes, components, 'body');
 }

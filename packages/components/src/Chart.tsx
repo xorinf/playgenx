@@ -23,7 +23,9 @@ export function Chart({ kind, data, title }: ChartProps): React.JSX.Element {
   return (
     <div data-pgx="Chart" data-chart-kind={kind} style={{ fontFamily: 'inherit' }}>
       {title !== undefined ? (
-        <div style={{ fontSize: '14px', fontWeight: 600, color: colors.fg, marginBottom: '6px' }}>{title}</div>
+        <div style={{ fontSize: '14px', fontWeight: 600, color: colors.fg, marginBottom: '6px' }}>
+          {title}
+        </div>
       ) : null}
       {renderChart(kind, data)}
     </div>
@@ -45,7 +47,13 @@ function renderBar(data: unknown): React.JSX.Element {
   const height = 160;
   const barWidth = width / Math.max(1, labels.length);
   return (
-    <svg width={width} height={height} role="img" aria-label="Bar chart" style={{ display: 'block' }}>
+    <svg
+      width={width}
+      height={height}
+      role="img"
+      aria-label="Bar chart"
+      style={{ display: 'block' }}
+    >
       {values.map((v, i) => {
         const h = (Math.max(0, v) / max) * (height - 24);
         return (
@@ -81,7 +89,12 @@ function renderLine(data: unknown): React.JSX.Element {
     const series = (data as { series: Array<{ points?: Array<{ x: number; y: number }> }> }).series;
     const first = series?.[0];
     points = Array.isArray(first?.points) ? first.points : [];
-  } else if (data && typeof data === 'object' && Array.isArray((data as { x?: unknown }).x) && Array.isArray((data as { y?: unknown }).y)) {
+  } else if (
+    data &&
+    typeof data === 'object' &&
+    Array.isArray((data as { x?: unknown }).x) &&
+    Array.isArray((data as { y?: unknown }).y)
+  ) {
     const xArr = (data as { x: number[] }).x;
     const yArr = (data as { y: number[] }).y;
     points = xArr.map((x, i) => ({ x, y: yArr[i] ?? 0 }));
@@ -96,8 +109,11 @@ function renderLine(data: unknown): React.JSX.Element {
   const w = 320;
   const h = 160;
   const sx = (x: number) => (xMax === xMin ? w / 2 : ((x - xMin) / (xMax - xMin)) * (w - 8) + 4);
-  const sy = (y: number) => (yMax === yMin ? h / 2 : h - ((y - yMin) / (yMax - yMin)) * (h - 24) - 12);
-  const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${sx(p.x).toFixed(2)},${sy(p.y).toFixed(2)}`).join(' ');
+  const sy = (y: number) =>
+    yMax === yMin ? h / 2 : h - ((y - yMin) / (yMax - yMin)) * (h - 24) - 12;
+  const path = points
+    .map((p, i) => `${i === 0 ? 'M' : 'L'}${sx(p.x).toFixed(2)},${sy(p.y).toFixed(2)}`)
+    .join(' ');
   return (
     <svg width={w} height={h} role="img" aria-label="Line chart" style={{ display: 'block' }}>
       <path d={path} fill="none" stroke={colors.line} strokeWidth={2} />

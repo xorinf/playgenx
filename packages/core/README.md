@@ -60,12 +60,7 @@ if (result.ok) {
 ## Customising
 
 ```ts
-import {
-  generatePlayground,
-  OpenAIProvider,
-  createRegistry,
-  validate,
-} from 'playgenx';
+import { generatePlayground, OpenAIProvider, createRegistry, validate } from 'playgenx';
 
 const customRegistry = createRegistry(['Button', 'Slider', 'MyWidget']);
 

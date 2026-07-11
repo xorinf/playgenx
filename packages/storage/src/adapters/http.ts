@@ -79,7 +79,9 @@ export class HttpAdapter implements ArtifactStorage {
   }
 
   private url(id?: string): string {
-    return id ? `${this.baseUrl}${this.pathPrefix}/${encodeURIComponent(id)}` : `${this.baseUrl}${this.pathPrefix}`;
+    return id
+      ? `${this.baseUrl}${this.pathPrefix}/${encodeURIComponent(id)}`
+      : `${this.baseUrl}${this.pathPrefix}`;
   }
 
   private async withTimeout(signal: AbortSignal | undefined): Promise<AbortController> {

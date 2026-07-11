@@ -4,7 +4,7 @@ Pluggable persistence for PlayGenX artifacts. Mirrors the `Provider`-style conve
 
 ## Why
 
-`@playgenx/types` defines `Artifact`; this package defines *where they live*. The contract lives in `@playgenx/types` (`ArtifactStorage`), the implementations live here.
+`@playgenx/types` defines `Artifact`; this package defines _where they live_. The contract lives in `@playgenx/types` (`ArtifactStorage`), the implementations live here.
 
 ## Install
 
@@ -29,11 +29,11 @@ const http = new HttpAdapter({ baseUrl: 'https://api.example.com' });
 
 ## Adapters
 
-| Adapter | Path | Backend | Notes |
-|---|---|---|---|
-| `local` | `@playgenx/storage/local` (or `createStorage('local')`) | browser `localStorage` | Default. No deps. ~5MB quota. |
-| `http` | `@playgenx/storage/http` (or `createStorage('http')`) | Any REST API | Opaque URL shape. Server owns schema + auth. |
-| `s3` | `@playgenx/storage/s3` (or `createStorage('s3')`) | AWS S3 (or any S3-compatible: R2, MinIO, LocalStack) | Brings `@aws-sdk/client-s3` (peerDependenciesMeta.optional). |
+| Adapter | Path                                                    | Backend                                              | Notes                                                        |
+| ------- | ------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------ |
+| `local` | `@playgenx/storage/local` (or `createStorage('local')`) | browser `localStorage`                               | Default. No deps. ~5MB quota.                                |
+| `http`  | `@playgenx/storage/http` (or `createStorage('http')`)   | Any REST API                                         | Opaque URL shape. Server owns schema + auth.                 |
+| `s3`    | `@playgenx/storage/s3` (or `createStorage('s3')`)       | AWS S3 (or any S3-compatible: R2, MinIO, LocalStack) | Brings `@aws-sdk/client-s3` (peerDependenciesMeta.optional). |
 
 ## Contract
 

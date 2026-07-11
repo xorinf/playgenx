@@ -61,7 +61,11 @@ export function Stepper({ steps, initial }: StepperProps): React.JSX.Element {
           const future = i > active;
           const stepStyle: React.CSSProperties = {
             ...stepBtnBase,
-            background: isCurrent ? colors.stepperCurrent : isPast ? colors.stepperPast : colors.stepperFuture,
+            background: isCurrent
+              ? colors.stepperCurrent
+              : isPast
+                ? colors.stepperPast
+                : colors.stepperFuture,
             color: isCurrent || isPast ? '#fff' : colors.fg,
             opacity: future ? 0.6 : 1,
             cursor: future ? 'not-allowed' : 'pointer',

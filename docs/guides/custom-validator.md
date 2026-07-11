@@ -22,7 +22,7 @@ Return `null` to pass, or a string with an error message to fail.
 
 ## Composing with the built-in
 
-If you want to use the built-in validator *and* your own check:
+If you want to use the built-in validator _and_ your own check:
 
 ```ts
 import { validate, createRegistry, generatePlayground, OpenAIProvider } from 'playgenx';

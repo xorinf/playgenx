@@ -44,9 +44,7 @@ describe('tagNames', () => {
   });
 
   it('handles escaped quotes inside strings (does not exit early)', () => {
-    expect(tagNames('const s = "<Button>\\"<More>"; <RealWidget />')).toEqual([
-      'RealWidget',
-    ]);
+    expect(tagNames('const s = "<Button>\\"<More>"; <RealWidget />')).toEqual(['RealWidget']);
   });
 
   it('preserves tag names that are adjacent to other text', () => {

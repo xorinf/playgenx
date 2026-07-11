@@ -51,8 +51,20 @@ export function hasBalancedTags(body: string): boolean {
  * opening tag for one of these, we don't expect a matching close.
  */
 const VOID_ELEMENTS = new Set([
-  'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
-  'link', 'meta', 'param', 'source', 'track', 'wbr',
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'param',
+  'source',
+  'track',
+  'wbr',
 ]);
 
 /**
@@ -91,8 +103,7 @@ function stripSelfClosingTags(input: string): string {
       continue;
     }
     const next = input.charCodeAt(i + 1);
-    const isTagStart =
-      (next >= 65 && next <= 90) || (next >= 97 && next <= 122);
+    const isTagStart = (next >= 65 && next <= 90) || (next >= 97 && next <= 122);
     if (!isTagStart) {
       // Could be `</Tag` (closing) or `<<` or `<3` etc. Keep going.
       out += input[i] ?? '';
@@ -135,7 +146,8 @@ function stripSelfClosingTags(input: string): string {
     // Check if the tag is self-closing: char before `>` should be `/`.
     // Allow whitespace between `/` and `>`.
     let k = j - 1;
-    while (k > i && (input.charCodeAt(k) === 32 /* space */ || input.charCodeAt(k) === 9 /* tab */)) k--;
+    while (k > i && (input.charCodeAt(k) === 32 /* space */ || input.charCodeAt(k) === 9) /* tab */)
+      k--;
     if (k > i && input.charCodeAt(k) === 47 /* / */) {
       selfClosing = true;
     }

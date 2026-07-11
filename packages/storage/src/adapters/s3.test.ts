@@ -37,7 +37,10 @@ function installMockSdk0(): { state: MockState; restore: () => void } {
         const { Bucket, Key } = cmd.input as { Bucket: string; Key: string };
         const body = state.objects.get(`${Bucket}/${Key}`);
         if (!body) {
-          throw Object.assign(new Error('NoSuchKey'), { name: 'NoSuchKey', $metadata: { httpStatusCode: 404 } });
+          throw Object.assign(new Error('NoSuchKey'), {
+            name: 'NoSuchKey',
+            $metadata: { httpStatusCode: 404 },
+          });
         }
         return { Body: body };
       }
@@ -45,7 +48,10 @@ function installMockSdk0(): { state: MockState; restore: () => void } {
         if (state.throws.delete) throw new Error('boom');
         const { Bucket, Key } = cmd.input as { Bucket: string; Key: string };
         if (!state.objects.has(`${Bucket}/${Key}`)) {
-          throw Object.assign(new Error('NoSuchKey'), { name: 'NoSuchKey', $metadata: { httpStatusCode: 404 } });
+          throw Object.assign(new Error('NoSuchKey'), {
+            name: 'NoSuchKey',
+            $metadata: { httpStatusCode: 404 },
+          });
         }
         state.objects.delete(`${Bucket}/${Key}`);
         return {};
@@ -184,25 +190,27 @@ describe('S3Adapter', () => {
 
   it('throws when bucket is missing', () => {
     installMockSdk();
-    expect(() =>
-      new S3Adapter({
-        region: 'us-east-1',
-        accessKeyId: 'x',
-        secretAccessKey: 'y',
-        bucket: '',
-      }),
+    expect(
+      () =>
+        new S3Adapter({
+          region: 'us-east-1',
+          accessKeyId: 'x',
+          secretAccessKey: 'y',
+          bucket: '',
+        }),
     ).toThrow(/bucket is required/);
   });
 
   it('throws when credentials are missing', () => {
     installMockSdk();
-    expect(() =>
-      new S3Adapter({
-        region: 'us-east-1',
-        accessKeyId: '',
-        secretAccessKey: '',
-        bucket: 'b',
-      }),
+    expect(
+      () =>
+        new S3Adapter({
+          region: 'us-east-1',
+          accessKeyId: '',
+          secretAccessKey: '',
+          bucket: 'b',
+        }),
     ).toThrow(/accessKeyId and secretAccessKey are required/);
   });
 

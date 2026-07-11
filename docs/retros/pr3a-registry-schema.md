@@ -24,10 +24,13 @@ time. With schema validation, the error surfaces in the
 
 ```ts
 const schemas: ComponentSchema[] = [
-  { name: 'Button', props: [
-    { name: 'label', kind: 'string', required: true },
-    { name: 'disabled', kind: 'boolean' },
-  ]},
+  {
+    name: 'Button',
+    props: [
+      { name: 'label', kind: 'string', required: true },
+      { name: 'disabled', kind: 'boolean' },
+    ],
+  },
 ];
 const err = validate(body, undefined, { schemas });
 ```
@@ -39,9 +42,9 @@ accepts any expression — the renderer from PR 4 turns these into
 **Behaviour:**
 
 - Unknown props → rejected with `Unknown prop: <X foo>. Allowed:
-  bar, baz`.
+bar, baz`.
 - Required prop missing → rejected with `Missing required prop
-  \`min\` on <Slider>`.
+\`min\` on <Slider>`.
 - Wrong kind → rejected with `expected number, got expression`.
 - Built-in HTML tags (`div`, `p`, …) are NOT schema-checked,
   regardless of `schemas` option. Schema check is registered-

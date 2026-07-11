@@ -1,6 +1,6 @@
 # Security
 
-PlayGenX generates *content*. The validator checks content for
+PlayGenX generates _content_. The validator checks content for
 clearly-forbidden constructs and unknown component names. It is **not** a
 security boundary against a determined attacker.
 
@@ -17,7 +17,7 @@ In v0.1.0, the built-in validator checks, in order:
 4. JSX tags are roughly balanced.
 5. Every capitalized tag is in the registry or the built-in safe set.
 
-These are *defense in depth*, not a sandbox.
+These are _defense in depth_, not a sandbox.
 
 ## What the validator does NOT do
 

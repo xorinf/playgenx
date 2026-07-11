@@ -43,7 +43,7 @@ describe('hasBalancedTags', () => {
   });
 
   it('handles multiple attributes with mixed quotes', () => {
-    expect(hasBalancedTags("<Foo bar=\"x\" baz='y' qux=\"z\" />")).toBe(true);
+    expect(hasBalancedTags('<Foo bar="x" baz=\'y\' qux="z" />')).toBe(true);
   });
 
   it('treats void elements as self-closing', () => {
@@ -91,18 +91,12 @@ describe('hasBalancedTags', () => {
   });
 
   it('correctly handles deeply nested balanced structures', () => {
-    expect(
-      hasBalancedTags(
-        '<div><section><article><p>text</p></article></section></div>',
-      ),
-    ).toBe(true);
+    expect(hasBalancedTags('<div><section><article><p>text</p></article></section></div>')).toBe(
+      true,
+    );
   });
 
   it('detects imbalance in deeply nested structures', () => {
-    expect(
-      hasBalancedTags(
-        '<div><section><article><p>text</article></section></div>',
-      ),
-    ).toBe(false);
+    expect(hasBalancedTags('<div><section><article><p>text</article></section></div>')).toBe(false);
   });
 });

@@ -96,7 +96,9 @@ const JSON_KIND_SHAPES: Readonly<Record<string, (parsed: unknown) => string | nu
         return `quiz question ${i} is missing ` + '`answer`' + ` (must be a non-empty string id)`;
       }
       if (!optionIds.has(qq.answer as string)) {
-        return `quiz question ${i}: ` + '`answer`' + ` ("${qq.answer}") doesn't match any option id`;
+        return (
+          `quiz question ${i}: ` + '`answer`' + ` ("${qq.answer}") doesn't match any option id`
+        );
       }
     }
     return null;

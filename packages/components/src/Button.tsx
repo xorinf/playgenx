@@ -21,7 +21,12 @@ export interface ButtonProps {
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
 }
 
-export function Button({ label, variant = 'primary', disabled = false, onClick }: ButtonProps): React.JSX.Element {
+export function Button({
+  label,
+  variant = 'primary',
+  disabled = false,
+  onClick,
+}: ButtonProps): React.JSX.Element {
   const styles: React.CSSProperties = {
     fontFamily: 'inherit',
     fontSize: '14px',
@@ -31,8 +36,14 @@ export function Button({ label, variant = 'primary', disabled = false, onClick }
     border: '1px solid transparent',
     cursor: disabled ? 'not-allowed' : 'pointer',
     opacity: disabled ? 0.5 : 1,
-    background: variant === 'primary' ? colors.primary : variant === 'secondary' ? colors.secondaryFg : 'transparent',
-    color: variant === 'ghost' ? colors.ghostFg : variant === 'secondary' ? colors.bg : colors.primaryFg,
+    background:
+      variant === 'primary'
+        ? colors.primary
+        : variant === 'secondary'
+          ? colors.secondaryFg
+          : 'transparent',
+    color:
+      variant === 'ghost' ? colors.ghostFg : variant === 'secondary' ? colors.bg : colors.primaryFg,
     borderColor: variant === 'ghost' ? colors.border : 'transparent',
   };
   return (

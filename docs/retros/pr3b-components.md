@@ -14,19 +14,19 @@ registry lookup.
 
 **Components shipped:**
 
-| Name | State | Notes |
-|---|---|---|
-| Button | stateless | label, variant, disabled, onClick |
-| TextField | controlled-or-uncontrolled | label, value, placeholder, disabled, onChange |
-| Slider | clamped range | min/max required, value, step, label |
-| Chart | stateless | bar / line / pie via hand-rolled SVG |
-| Container | stateless | padding + gap (CSS) |
-| Code | stateless | inline or `<pre>` block |
-| Heading | level-clamped | renders h1..h6, clamps out-of-range |
-| Text | stateless | weight, size, color (CSS) |
-| Stepper | multi-step | aria-current, disabled-when-future, click to advance |
-| Card | stateless | title, elevation (shadow by level) |
-| List | stateless | items array → `<ul>` or `<ol>` |
+| Name      | State                      | Notes                                                |
+| --------- | -------------------------- | ---------------------------------------------------- |
+| Button    | stateless                  | label, variant, disabled, onClick                    |
+| TextField | controlled-or-uncontrolled | label, value, placeholder, disabled, onChange        |
+| Slider    | clamped range              | min/max required, value, step, label                 |
+| Chart     | stateless                  | bar / line / pie via hand-rolled SVG                 |
+| Container | stateless                  | padding + gap (CSS)                                  |
+| Code      | stateless                  | inline or `<pre>` block                              |
+| Heading   | level-clamped              | renders h1..h6, clamps out-of-range                  |
+| Text      | stateless                  | weight, size, color (CSS)                            |
+| Stepper   | multi-step                 | aria-current, disabled-when-future, click to advance |
+| Card      | stateless                  | title, elevation (shadow by level)                   |
+| List      | stateless                  | items array → `<ul>` or `<ol>`                       |
 
 **Why hand-rolled Chart (no recharts/visx):**
 
@@ -44,7 +44,7 @@ snapshot tests verify byte-equal output across rerenders.
 
 **Tests:** 39 (3 per component on average). jsdom + RTL. Registry
 coverage test verifies `componentMap` has entries for every name
-in `DEFAULT_REGISTRY` and *no* extras.
+in `DEFAULT_REGISTRY` and _no_ extras.
 
 **Bundle:** 16.9KB / 5.3KB gzipped, with 6.8KB of `.d.ts`.
 

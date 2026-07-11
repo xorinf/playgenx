@@ -9,9 +9,7 @@ describe('parseBodyNodes', () => {
     expect(first.kind).toBe('element');
     if (first.kind !== 'element') return;
     expect(first.name).toBe('Button');
-    expect(first.props).toEqual([
-      { name: 'label', kind: 'string', value: '"Go"' },
-    ]);
+    expect(first.props).toEqual([{ name: 'label', kind: 'string', value: '"Go"' }]);
   });
 
   it('parses a self-closing element with multiple props', () => {

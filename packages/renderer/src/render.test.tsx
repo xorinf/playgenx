@@ -31,7 +31,9 @@ const registry: ComponentMap = {
 
 describe('renderBody (high-level)', () => {
   it('mounts a single component from the body string', () => {
-    const { container } = render(renderBody('<Button label="Go" />', registry) as React.ReactElement);
+    const { container } = render(
+      renderBody('<Button label="Go" />', registry) as React.ReactElement,
+    );
     const btn = container.querySelector('button')!;
     expect(btn).toBeTruthy();
     expect(btn.textContent).toBe('Go');
@@ -99,9 +101,7 @@ describe('renderBody (high-level)', () => {
 describe('renderNodes (lower-level)', () => {
   it('renders an already-parsed tree directly', () => {
     const nodes = parseBodyNodes('<Heading>hi</Heading>');
-    const { container } = render(
-      renderNodes(nodes, registry, 'k') as React.ReactElement,
-    );
+    const { container } = render(renderNodes(nodes, registry, 'k') as React.ReactElement);
     expect(container.querySelector('h2')?.textContent).toBe('hi');
   });
 

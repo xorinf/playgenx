@@ -76,9 +76,7 @@ Generate a deck of **flashcards**. Body is a JSON string:
 
 ```json
 {
-  "cards": [
-    { "id": "c1", "front": "...", "back": "..." }
-  ]
+  "cards": [{ "id": "c1", "front": "...", "back": "..." }]
 }
 ```
 
@@ -95,19 +93,25 @@ Generate a guided **lab** (TSX/HTML body, multi-step with hints and a self-check
 
 ### `GenerateOptions` (shared)
 
-| Field          | Type                     | Default            | Notes                                |
-| -------------- | ------------------------ | ------------------ | ------------------------------------ |
-| `provider`     | `Provider`               | — (required)       | No default — kept explicit.          |
-| `model`        | `string`                 | provider's `defaultModel` | Override the model.            |
-| `registry`     | `Registry`               | `DEFAULT_REGISTRY` | Component allowlist.                 |
-| `validate`     | `(body: string) => string \| null` | built-in `validate` | Plug in your own validator. |
-| `skipJsxCheck` | `boolean`                | `false`            | Skip JSX-tag balance check (for JSON-bodied kinds, set automatically). |
+| Field          | Type                               | Default                   | Notes                                                                  |
+| -------------- | ---------------------------------- | ------------------------- | ---------------------------------------------------------------------- |
+| `provider`     | `Provider`                         | — (required)              | No default — kept explicit.                                            |
+| `model`        | `string`                           | provider's `defaultModel` | Override the model.                                                    |
+| `registry`     | `Registry`                         | `DEFAULT_REGISTRY`        | Component allowlist.                                                   |
+| `validate`     | `(body: string) => string \| null` | built-in `validate`       | Plug in your own validator.                                            |
+| `skipJsxCheck` | `boolean`                          | `false`                   | Skip JSX-tag balance check (for JSON-bodied kinds, set automatically). |
 
 **Returns** `Promise<ArtifactResult>` — discriminated union:
 
 ```ts
-{ ok: true;  artifact: Artifact }
-{ ok: false; error: ArtifactError }
+{
+  ok: true;
+  artifact: Artifact;
+}
+{
+  ok: false;
+  error: ArtifactError;
+}
 ```
 
 `ArtifactError.stage` is one of `'prompt' | 'provider' | 'parse' | 'validate'`.
@@ -151,21 +155,13 @@ interface ArtifactError {
 ### `ArtifactResult`
 
 ```ts
-type ArtifactResult =
-  | { ok: true; artifact: Artifact }
-  | { ok: false; error: ArtifactError };
+type ArtifactResult = { ok: true; artifact: Artifact } | { ok: false; error: ArtifactError };
 ```
 
 ### `ArtifactKind`
 
 ```ts
-type ArtifactKind =
-  | 'playground'
-  | 'poll'
-  | 'quiz'
-  | 'simulation'
-  | 'flashcards'
-  | 'lab';
+type ArtifactKind = 'playground' | 'poll' | 'quiz' | 'simulation' | 'flashcards' | 'lab';
 ```
 
 Only `'playground'` is fully wired in v0.1.0. Others are reserved names
@@ -195,10 +191,12 @@ function extractArtifact(raw: string): ExtractResult;
 
 ```ts
 type ExtractKind = 'tsx' | 'html' | 'plain';
-interface ParseError { message: string; line?: number }
+interface ParseError {
+  message: string;
+  line?: number;
+}
 type ExtractResult =
-  | { ok: true; kind: ExtractKind; body: string }
-  | { ok: false; error: ParseError };
+  { ok: true; kind: ExtractKind; body: string } | { ok: false; error: ParseError };
 ```
 
 Finds the first fenced code block (` ```tsx `, ` ```html `, ` ```jsx `, or
@@ -216,7 +214,10 @@ function validate(body: string, registry?: Registry): ValidationError | null;
 `ValidationError`:
 
 ```ts
-interface ValidationError { message: string; line?: number }
+interface ValidationError {
+  message: string;
+  line?: number;
+}
 ```
 
 Returns `null` on success, or a `ValidationError` on the first failure.
@@ -286,16 +287,16 @@ Use for tests and offline development.
 ```ts
 class OpenAIProvider implements Provider {
   readonly id: 'openai';
-  readonly defaultModel: string;  // 'gpt-4o-mini'
+  readonly defaultModel: string; // 'gpt-4o-mini'
   constructor(options?: OpenAIProviderOptions);
   complete(prompt: string, options?: { model?: string }): Promise<string>;
 }
 
 interface OpenAIProviderOptions {
-  apiKey?: string;        // defaults to process.env.OPENAI_API_KEY
-  baseUrl?: string;       // defaults to 'https://api.openai.com'
-  defaultModel?: string;  // defaults to 'gpt-4o-mini'
-  temperature?: number;   // defaults to 0.7
+  apiKey?: string; // defaults to process.env.OPENAI_API_KEY
+  baseUrl?: string; // defaults to 'https://api.openai.com'
+  defaultModel?: string; // defaults to 'gpt-4o-mini'
+  temperature?: number; // defaults to 0.7
 }
 ```
 

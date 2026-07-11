@@ -87,7 +87,10 @@ describe('LocalAdapter', () => {
 
   it('list filters by kind', async () => {
     await adapter.save({ id: 'pg', artifact: aFixture({ kind: 'playground' }) });
-    await adapter.save({ id: 'pl', artifact: aFixture({ kind: 'poll', body: '{"question":"x","options":[]}' }) });
+    await adapter.save({
+      id: 'pl',
+      artifact: aFixture({ kind: 'poll', body: '{"question":"x","options":[]}' }),
+    });
     const onlyPlayground = await adapter.list({ kind: 'playground' });
     expect(onlyPlayground).toHaveLength(1);
     expect(onlyPlayground[0]?.id).toBe('pg');

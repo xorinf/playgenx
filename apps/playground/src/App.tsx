@@ -29,11 +29,7 @@ const KINDS: ReadonlyArray<{ value: ArtifactKind; label: string }> = [
 ];
 
 const JSON_KINDS: ReadonlySet<ArtifactKind> = new Set(['poll', 'quiz', 'flashcards']);
-const TSX_KINDS: ReadonlySet<ArtifactKind> = new Set([
-  'playground',
-  'simulation',
-  'lab',
-]);
+const TSX_KINDS: ReadonlySet<ArtifactKind> = new Set(['playground', 'simulation', 'lab']);
 
 const DEFAULT_CONTEXT = `Binary search finds an item in a sorted array in O(log n) time by repeatedly dividing the search interval in half.`;
 
@@ -43,16 +39,13 @@ export function App() {
   const [kind, setKind] = useState<ArtifactKind>('playground');
   const [status, setStatus] = useState<Status>('idle');
   const [result, setResult] = useState<ArtifactResult | null>(null);
-  const [storedOverlay, setStoredOverlay] = useState<
-    | {
-        id: string;
-        kind: ArtifactKind;
-        body: string;
-        providerId: string;
-        model: string;
-      }
-    | null
-  >(null);
+  const [storedOverlay, setStoredOverlay] = useState<{
+    id: string;
+    kind: ArtifactKind;
+    body: string;
+    providerId: string;
+    model: string;
+  } | null>(null);
 
   // Single shared adapter for the whole tree. Lives at module scope
   // intentionally so re-renders of App don't recreate the adapter
@@ -62,7 +55,8 @@ export function App() {
     () =>
       new LocalAdapter({
         storage:
-          (typeof globalThis !== 'undefined' && (globalThis as { localStorage?: Storage }).localStorage) ||
+          (typeof globalThis !== 'undefined' &&
+            (globalThis as { localStorage?: Storage }).localStorage) ||
           undefined,
       }),
     [],
@@ -103,101 +97,92 @@ export function App() {
 
   return (
     <StorageProvider adapter={adapter}>
-    <div className="app">
-      <h1>PlayGenX Playground</h1>
-      <p className="lede">
-        Generate an interactive educational artifact for a given concept.
-      </p>
+      <div className="app">
+        <h1>PlayGenX Playground</h1>
+        <p className="lede">Generate an interactive educational artifact for a given concept.</p>
 
-      {!apiKey && (
-        <div className="warn">
-          <strong>VITE_OPENAI_API_KEY is not set.</strong> Copy{' '}
-          <code>apps/playground/.env.example</code> to{' '}
-          <code>apps/playground/.env</code> and add your key, then restart the
-          dev server.
-        </div>
-      )}
+        {!apiKey && (
+          <div className="warn">
+            <strong>VITE_OPENAI_API_KEY is not set.</strong> Copy{' '}
+            <code>apps/playground/.env.example</code> to <code>apps/playground/.env</code> and add
+            your key, then restart the dev server.
+          </div>
+        )}
 
-      <div className="row">
-        <div>
-          <label htmlFor="kind">Kind</label>
-          <select
-            id="kind"
-            value={kind}
-            onChange={(e) => setKind(e.target.value as ArtifactKind)}
-          >
-            {KINDS.map((k) => (
-              <option key={k.value} value={k.value}>
-                {k.label}
-              </option>
-            ))}
-          </select>
+        <div className="row">
+          <div>
+            <label htmlFor="kind">Kind</label>
+            <select
+              id="kind"
+              value={kind}
+              onChange={(e) => setKind(e.target.value as ArtifactKind)}
+            >
+              {KINDS.map((k) => (
+                <option key={k.value} value={k.value}>
+                  {k.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="concept">Concept</label>
+            <input
+              id="concept"
+              type="text"
+              value={concept}
+              onChange={(e) => setConcept(e.target.value)}
+              placeholder="e.g. binary search"
+            />
+          </div>
         </div>
+
         <div>
-          <label htmlFor="concept">Concept</label>
-          <input
-            id="concept"
-            type="text"
-            value={concept}
-            onChange={(e) => setConcept(e.target.value)}
-            placeholder="e.g. binary search"
+          <label htmlFor="context">Lecture context</label>
+          <textarea id="context" value={context} onChange={(e) => setContext(e.target.value)} />
+        </div>
+
+        <div style={{ marginTop: 16, display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+          <button onClick={onGenerate} disabled={status === 'loading' || !apiKey}>
+            {status === 'loading' ? 'Generating…' : 'Generate'}
+          </button>
+        </div>
+
+        <div className="layout">
+          <main>
+            {result && !result.ok && <ErrorBox error={result.error} />}
+
+            {result && result.ok && <ResultView result={result} kind={kind} />}
+
+            {storedOverlay && !result && (
+              <RenderStored
+                stored={{
+                  id: storedOverlay.id,
+                  createdAt: 0,
+                  artifact: {
+                    kind: storedOverlay.kind,
+                    body: storedOverlay.body,
+                    providerId: storedOverlay.providerId,
+                    model: storedOverlay.model,
+                  },
+                }}
+              />
+            )}
+          </main>
+          <LibraryPanel
+            latest={result && result.ok ? result : null}
+            onLoad={(s) => {
+              setStoredOverlay({
+                id: s.id,
+                kind: s.artifact.kind,
+                body: s.artifact.body,
+                providerId: s.artifact.providerId,
+                model: s.artifact.model,
+              });
+              setResult(null);
+            }}
           />
         </div>
       </div>
-
-      <div>
-        <label htmlFor="context">Lecture context</label>
-        <textarea
-          id="context"
-          value={context}
-          onChange={(e) => setContext(e.target.value)}
-        />
-      </div>
-
-      <div style={{ marginTop: 16, display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-        <button onClick={onGenerate} disabled={status === 'loading' || !apiKey}>
-          {status === 'loading' ? 'Generating…' : 'Generate'}
-        </button>
-      </div>
-
-      <div className="layout">
-        <main>
-          {result && !result.ok && <ErrorBox error={result.error} />}
-
-          {result && result.ok && (
-            <ResultView result={result} kind={kind} />
-          )}
-
-          {storedOverlay && !result && (
-            <RenderStored
-              stored={{
-                id: storedOverlay.id,
-                createdAt: 0,
-                artifact: {
-                  kind: storedOverlay.kind,
-                  body: storedOverlay.body,
-                  providerId: storedOverlay.providerId,
-                  model: storedOverlay.model,
-                },
-              }}
-            />
-          )}
-        </main>
-        <LibraryPanel
-          latest={result && result.ok ? result : null}
-          onLoad={(s) => {
-            setStoredOverlay({
-              id: s.id,
-              kind: s.artifact.kind,
-              body: s.artifact.body,
-              providerId: s.artifact.providerId,
-              model: s.artifact.model,
-            });
-            setResult(null);
-          }}
-        />
-      </div>
-    </div>
     </StorageProvider>
   );
 }
@@ -225,12 +210,10 @@ function ResultView({
     <div className="result">
       <header>
         <span>
-          <strong>artifact</strong> · {result.artifact.kind} ·{' '}
-          {result.artifact.providerId} · {result.artifact.model}
+          <strong>artifact</strong> · {result.artifact.kind} · {result.artifact.providerId} ·{' '}
+          {result.artifact.model}
         </span>
-        <span>
-          {JSON_KINDS.has(kind) ? 'json (pretty)' : 'body'}
-        </span>
+        <span>{JSON_KINDS.has(kind) ? 'json (pretty)' : 'body'}</span>
       </header>
       <pre>{displayBody}</pre>
       {TSX_KINDS.has(kind) && (

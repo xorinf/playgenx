@@ -48,7 +48,11 @@ if (result.ok) {
 Returns either:
 
 ```ts
-{ ok: true; kind: 'tsx' | 'html' | 'plain'; body: string }
+{
+  ok: true;
+  kind: 'tsx' | 'html' | 'plain';
+  body: string;
+}
 ```
 
 …or:
@@ -61,10 +65,10 @@ Returns either:
 
 **Fenced tsx:**
 
-```ts
+````ts
 extractArtifact('Intro.\n\n```tsx\nconst x = 1;\n```\n\nBye.');
 // → { ok: true, kind: 'tsx', body: 'const x = 1;' }
-```
+````
 
 **Unfenced code:**
 
@@ -82,7 +86,7 @@ extractArtifact('Binary search finds an item in O(log n).');
 
 **Unbalanced fence:**
 
-```ts
+````ts
 extractArtifact('```tsx\nconst x = 1;');
 // → { ok: false, error: { message: 'Unbalanced code fence', line: 1 } }
-```
+````

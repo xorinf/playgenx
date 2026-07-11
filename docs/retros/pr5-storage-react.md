@@ -35,7 +35,7 @@ latest" mini-form when a successful artifact exists in the
 
 **Decisions worth remembering:**
 
-- `storage-react` deliberately does *not* depend on
+- `storage-react` deliberately does _not_ depend on
   `react-dom` — only `react` is a peer. This keeps it usable
   in React Native without DOM, even though the playground
   is web-only.

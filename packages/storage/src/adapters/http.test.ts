@@ -14,9 +14,7 @@ function aFixture(): Artifact {
 class MockFetch {
   calls: { url: string; init: RequestInit }[] = [];
   private route: (url: string, init: RequestInit) => Response;
-  constructor(
-    route: (url: string, init: RequestInit) => Response,
-  ) {
+  constructor(route: (url: string, init: RequestInit) => Response) {
     this.route = route;
   }
   fetch: typeof fetch = (input, init) => {
@@ -36,9 +34,7 @@ function jsonResponse(status: number, body: unknown): Response {
 
 describe('HttpAdapter', () => {
   it('save POSTs without id; server returns id', async () => {
-    const mf = new MockFetch(
-      () => jsonResponse(200, { id: 'srv-id', url: 'https://ex.com/a' }),
-    );
+    const mf = new MockFetch(() => jsonResponse(200, { id: 'srv-id', url: 'https://ex.com/a' }));
     const a = new HttpAdapter({ baseUrl: 'https://x.test', fetchImpl: mf.fetch });
     const out = await a.save({ artifact: aFixture() });
     expect(out).toEqual({ id: 'srv-id', url: 'https://ex.com/a' });

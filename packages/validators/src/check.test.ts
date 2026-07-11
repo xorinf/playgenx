@@ -78,7 +78,10 @@ describe('validate', () => {
   it('skipJsxCheck=true: JSON-bodied artifacts with no tags pass', () => {
     const json = JSON.stringify({
       question: 'What is 2 + 2?',
-      options: [{ id: 'a', label: '3' }, { id: 'b', label: '4' }],
+      options: [
+        { id: 'a', label: '3' },
+        { id: 'b', label: '4' },
+      ],
     });
     expect(validate(json, undefined, { skipJsxCheck: true })).toBeNull();
   });
@@ -136,10 +139,7 @@ describe('validateForKind (kind-specific JSON shape checks)', () => {
     });
 
     it('rejects missing question', () => {
-      const err = validateForKind(
-        'poll',
-        JSON.stringify({ options: [{ id: 'a', label: 'x' }] }),
-      );
+      const err = validateForKind('poll', JSON.stringify({ options: [{ id: 'a', label: 'x' }] }));
       expect(err?.message).toMatch(/missing `question`/);
     });
 
@@ -232,7 +232,10 @@ describe('validateForKind (kind-specific JSON shape checks)', () => {
             {
               id: 'q1',
               prompt: 'p',
-              options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }],
+              options: [
+                { id: 'a', label: 'A' },
+                { id: 'b', label: 'B' },
+              ],
               answer: 'a',
             },
           ],
@@ -249,19 +252,28 @@ describe('validateForKind (kind-specific JSON shape checks)', () => {
             {
               id: 'q1',
               prompt: 'p',
-              options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }],
+              options: [
+                { id: 'a', label: 'A' },
+                { id: 'b', label: 'B' },
+              ],
               answer: 'c',
             },
             {
               id: 'q2',
               prompt: 'p',
-              options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }],
+              options: [
+                { id: 'a', label: 'A' },
+                { id: 'b', label: 'B' },
+              ],
               answer: 'a',
             },
             {
               id: 'q3',
               prompt: 'p',
-              options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }],
+              options: [
+                { id: 'a', label: 'A' },
+                { id: 'b', label: 'B' },
+              ],
               answer: 'a',
             },
           ],
@@ -382,9 +394,33 @@ describe('validateForKind (kind-specific JSON shape checks)', () => {
         'quiz',
         JSON.stringify({
           questions: [
-            { id: 'q1', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'a' },
-            { id: 'q1', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'a' }, // dup
-            { id: 'q3', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'a' },
+            {
+              id: 'q1',
+              prompt: 'p',
+              options: [
+                { id: 'a', label: 'A' },
+                { id: 'b', label: 'B' },
+              ],
+              answer: 'a',
+            },
+            {
+              id: 'q1',
+              prompt: 'p',
+              options: [
+                { id: 'a', label: 'A' },
+                { id: 'b', label: 'B' },
+              ],
+              answer: 'a',
+            }, // dup
+            {
+              id: 'q3',
+              prompt: 'p',
+              options: [
+                { id: 'a', label: 'A' },
+                { id: 'b', label: 'B' },
+              ],
+              answer: 'a',
+            },
           ],
         }),
       );
@@ -396,9 +432,33 @@ describe('validateForKind (kind-specific JSON shape checks)', () => {
         'quiz',
         JSON.stringify({
           questions: [
-            { id: 'q1', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'a', label: 'B' }], answer: 'a' },
-            { id: 'q2', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'a' },
-            { id: 'q3', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'a' },
+            {
+              id: 'q1',
+              prompt: 'p',
+              options: [
+                { id: 'a', label: 'A' },
+                { id: 'a', label: 'B' },
+              ],
+              answer: 'a',
+            },
+            {
+              id: 'q2',
+              prompt: 'p',
+              options: [
+                { id: 'a', label: 'A' },
+                { id: 'b', label: 'B' },
+              ],
+              answer: 'a',
+            },
+            {
+              id: 'q3',
+              prompt: 'p',
+              options: [
+                { id: 'a', label: 'A' },
+                { id: 'b', label: 'B' },
+              ],
+              answer: 'a',
+            },
           ],
         }),
       );
@@ -410,9 +470,33 @@ describe('validateForKind (kind-specific JSON shape checks)', () => {
         'quiz',
         JSON.stringify({
           questions: [
-            { id: 'q1', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: '' },
-            { id: 'q2', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'a' },
-            { id: 'q3', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'a' },
+            {
+              id: 'q1',
+              prompt: 'p',
+              options: [
+                { id: 'a', label: 'A' },
+                { id: 'b', label: 'B' },
+              ],
+              answer: '',
+            },
+            {
+              id: 'q2',
+              prompt: 'p',
+              options: [
+                { id: 'a', label: 'A' },
+                { id: 'b', label: 'B' },
+              ],
+              answer: 'a',
+            },
+            {
+              id: 'q3',
+              prompt: 'p',
+              options: [
+                { id: 'a', label: 'A' },
+                { id: 'b', label: 'B' },
+              ],
+              answer: 'a',
+            },
           ],
         }),
       );
@@ -425,8 +509,24 @@ describe('validateForKind (kind-specific JSON shape checks)', () => {
         JSON.stringify({
           questions: [
             null,
-            { id: 'q2', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'a' },
-            { id: 'q3', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'a' },
+            {
+              id: 'q2',
+              prompt: 'p',
+              options: [
+                { id: 'a', label: 'A' },
+                { id: 'b', label: 'B' },
+              ],
+              answer: 'a',
+            },
+            {
+              id: 'q3',
+              prompt: 'p',
+              options: [
+                { id: 'a', label: 'A' },
+                { id: 'b', label: 'B' },
+              ],
+              answer: 'a',
+            },
           ],
         }),
       );
@@ -441,9 +541,33 @@ describe('validateForKind (kind-specific JSON shape checks)', () => {
         'quiz',
         JSON.stringify({
           questions: [
-            { id: 'q1', prompt: 'p', options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], answer: 'c' },
-            { id: 'q2', prompt: 'p', options: [{ id: 'c', label: 'C' }, { id: 'd', label: 'D' }], answer: 'c' },
-            { id: 'q3', prompt: 'p', options: [{ id: 'e', label: 'E' }, { id: 'f', label: 'F' }], answer: 'e' },
+            {
+              id: 'q1',
+              prompt: 'p',
+              options: [
+                { id: 'a', label: 'A' },
+                { id: 'b', label: 'B' },
+              ],
+              answer: 'c',
+            },
+            {
+              id: 'q2',
+              prompt: 'p',
+              options: [
+                { id: 'c', label: 'C' },
+                { id: 'd', label: 'D' },
+              ],
+              answer: 'c',
+            },
+            {
+              id: 'q3',
+              prompt: 'p',
+              options: [
+                { id: 'e', label: 'E' },
+                { id: 'f', label: 'F' },
+              ],
+              answer: 'e',
+            },
           ],
         }),
       );
@@ -499,7 +623,10 @@ describe('validateForKind (kind-specific JSON shape checks)', () => {
       // still parse fine — the determinism check is TSX-only.
       const json = JSON.stringify({
         question: 'What is Math?',
-        options: [{ id: 'a', label: 'A study' }, { id: 'b', label: 'B study' }],
+        options: [
+          { id: 'a', label: 'A study' },
+          { id: 'b', label: 'B study' },
+        ],
       });
       expect(validateForKind('poll', json)).toBeNull();
     });
@@ -533,21 +660,17 @@ describe('prop-shape validation (validate with schemas)', () => {
   });
 
   it('rejects a wrong-kind prop (number schema, expression value)', () => {
-    const err = validate(
-      '<Slider min={min} max={max} />',
-      undefined,
-      {
-        schemas: [
-          {
-            name: 'Slider',
-            props: [
-              { name: 'min', kind: 'number', required: true },
-              { name: 'max', kind: 'number', required: true },
-            ],
-          },
-        ],
-      },
-    );
+    const err = validate('<Slider min={min} max={max} />', undefined, {
+      schemas: [
+        {
+          name: 'Slider',
+          props: [
+            { name: 'min', kind: 'number', required: true },
+            { name: 'max', kind: 'number', required: true },
+          ],
+        },
+      ],
+    });
     expect(err?.message).toMatch(/expected number, got expression/);
   });
 
@@ -585,9 +708,7 @@ describe('prop-shape validation (validate with schemas)', () => {
 
   it('prop-shape check is skipped entirely when schemas is the empty array', () => {
     // Callers can opt OUT by passing `schemas: []`.
-    expect(
-      validate('<Button flavour="bad" />', undefined, { schemas: [] }),
-    ).toBeNull();
+    expect(validate('<Button flavour="bad" />', undefined, { schemas: [] })).toBeNull();
   });
 
   it('validateForKind (TSX path) forwards the schemas option', () => {
@@ -600,10 +721,15 @@ describe('prop-shape validation (validate with schemas)', () => {
   it('does not run prop-shape on JSON kinds even if schemas is supplied', () => {
     const json = JSON.stringify({
       question: 'q',
-      options: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }],
+      options: [
+        { id: 'a', label: 'A' },
+        { id: 'b', label: 'B' },
+      ],
     });
     // schemas is irrelevant for JSON kinds — the JSON shape check is
     // the source of truth.
-    expect(validateForKind('poll', json, undefined, { schemas: DEFAULT_COMPONENT_SCHEMAS })).toBeNull();
+    expect(
+      validateForKind('poll', json, undefined, { schemas: DEFAULT_COMPONENT_SCHEMAS }),
+    ).toBeNull();
   });
 });

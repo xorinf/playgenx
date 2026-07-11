@@ -54,10 +54,7 @@ describe('propsOfTag', () => {
   });
 
   it('handles deeply nested braces in expression values', () => {
-    const out = propsOfTag(
-      '<Card data={{ a: { b: 1 } }} />',
-      'Card',
-    );
+    const out = propsOfTag('<Card data={{ a: { b: 1 } }} />', 'Card');
     expect(out[0]?.kind).toBe('expression');
     expect(out[0]?.value).toContain('a:');
   });

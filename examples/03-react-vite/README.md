@@ -21,7 +21,7 @@ Then open the URL Vite prints.
 
 ## Files
 
-This is the *minimum* you'd write to embed the SDK in a React app:
+This is the _minimum_ you'd write to embed the SDK in a React app:
 
 - `package.json` — Vite + React + `playgenx`.
 - `vite.config.ts` — minimal Vite config.

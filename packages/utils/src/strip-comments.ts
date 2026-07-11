@@ -14,9 +14,7 @@ export function stripCodeComments(body: string): string {
   // Strip strings first so // inside "..." doesn't look like a comment.
   const noStrings = stripStrings(body);
   // Replace //...\n with the same number of newlines (so the line count holds).
-  const noLineComments = noStrings.replace(/\/\/[^\n]*/g, (m: string) =>
-    m.replace(/[^\n]/g, ' '),
-  );
+  const noLineComments = noStrings.replace(/\/\/[^\n]*/g, (m: string) => m.replace(/[^\n]/g, ' '));
   // Replace /* ... */ with spaces, preserving newlines.
   const noBlockComments = noLineComments.replace(/\/\*[\s\S]*?\*\//g, (m: string) =>
     m.replace(/[^\n]/g, ' '),

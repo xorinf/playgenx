@@ -27,7 +27,7 @@ Out of scope:
 
 ## Trust model
 
-PlayGenX generates *content*. The validator checks content for
+PlayGenX generates _content_. The validator checks content for
 clearly-forbidden constructs and unknown component names. It is **not** a
 security boundary against a determined attacker. For untrusted input,
 treat validator-passing output as untrusted and render it in a sandboxed

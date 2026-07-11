@@ -76,11 +76,7 @@ export function LibraryPanel({ latest, onLoad }: LibraryPanelProps): ReactElemen
               <span className="muted">{fmtDate(a.createdAt)}</span>
             </div>
             <div className="row-l actions">
-              <button
-                type="button"
-                onClick={() => onLoad(a)}
-                aria-label={`Load ${a.id}`}
-              >
+              <button type="button" onClick={() => onLoad(a)} aria-label={`Load ${a.id}`}>
                 load
               </button>
               <button
@@ -151,8 +147,8 @@ function RenderStored({ stored }: { stored: StoredArtifact }): ReactElement {
     <article className="result">
       <header>
         <span>
-          <strong>artifact</strong> · {stored.artifact.kind} ·{' '}
-          {stored.artifact.providerId} · {stored.artifact.model}
+          <strong>artifact</strong> · {stored.artifact.kind} · {stored.artifact.providerId} ·{' '}
+          {stored.artifact.model}
         </span>
         <span>id {shortId(stored.id)}</span>
       </header>

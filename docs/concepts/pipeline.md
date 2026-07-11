@@ -54,12 +54,12 @@ replaceable:
 
 `ArtifactError.stage` tells you which pipeline stage failed:
 
-| Stage       | When                                       |
-| ----------- | ------------------------------------------ |
-| `prompt`    | Prompt template error (very rare).         |
-| `provider`  | Network / API / auth failure.              |
-| `parse`     | Unbalanced fence or no extractable body.   |
-| `validate`  | Body failed safety or registry checks.     |
+| Stage      | When                                     |
+| ---------- | ---------------------------------------- |
+| `prompt`   | Prompt template error (very rare).       |
+| `provider` | Network / API / auth failure.            |
+| `parse`    | Unbalanced fence or no extractable body. |
+| `validate` | Body failed safety or registry checks.   |
 
 ## Catching failures
 
@@ -82,12 +82,12 @@ if (!result.ok) {
 
 ## Stage purity
 
-| Stage      | Pure? | Reads env? | Reads network? |
-| ---------- | :---: | :--------: | :------------: |
-| prompt     |  ✅   |     no     |       no       |
-| provider   |  ❌   |    yes¹    |      yes       |
-| parse      |  ✅   |     no     |       no       |
-| validate   |  ✅   |     no     |       no       |
+| Stage    | Pure? | Reads env? | Reads network? |
+| -------- | :---: | :--------: | :------------: |
+| prompt   |  ✅   |     no     |       no       |
+| provider |  ❌   |    yes¹    |      yes       |
+| parse    |  ✅   |     no     |       no       |
+| validate |  ✅   |     no     |       no       |
 
 ¹ The OpenAI provider reads `OPENAI_API_KEY` lazily, but only because
 that env var was a deliberate design choice. You can pass the key

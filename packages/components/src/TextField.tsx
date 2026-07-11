@@ -19,7 +19,13 @@ export interface TextFieldProps {
  * uncontrolled (uses its own state via defaultValue). When a stable
  * (deterministic) caller wires both, the input is fully controlled.
  */
-export function TextField({ label, value, placeholder, disabled = false, onChange }: TextFieldProps): React.JSX.Element {
+export function TextField({
+  label,
+  value,
+  placeholder,
+  disabled = false,
+  onChange,
+}: TextFieldProps): React.JSX.Element {
   const wrapperStyle: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',

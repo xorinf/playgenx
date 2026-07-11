@@ -97,9 +97,7 @@ describe('Chart', () => {
   });
 
   it('renders a line chart for {x, y}', () => {
-    const { container } = render(
-      <Chart kind="line" data={{ x: [1, 2, 3], y: [10, 20, 15] }} />,
-    );
+    const { container } = render(<Chart kind="line" data={{ x: [1, 2, 3], y: [10, 20, 15] }} />);
     expect(container.querySelector('svg path')).toBeTruthy();
   });
 

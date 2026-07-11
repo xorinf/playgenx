@@ -25,13 +25,8 @@ export interface StorageProviderProps {
  * {@link useStorage}, {@link useSaveArtifact}, and
  * {@link useListedArtifacts} read this context.
  */
-export function StorageProvider({
-  adapter,
-  children,
-}: StorageProviderProps): React.JSX.Element {
-  return (
-    <StorageContext.Provider value={adapter}>{children}</StorageContext.Provider>
-  );
+export function StorageProvider({ adapter, children }: StorageProviderProps): React.JSX.Element {
+  return <StorageContext.Provider value={adapter}>{children}</StorageContext.Provider>;
 }
 
 export { StorageContext };

@@ -60,7 +60,7 @@ await generatePlayground(req, {
 
 ## Trust model
 
-PlayGenX is a *content generator*. The validator checks content for
+PlayGenX is a _content generator_. The validator checks content for
 clearly-forbidden constructs and unknown component names. It is **not** a
 security boundary against a determined attacker. For untrusted input,
 render validator-passing output in a sandboxed context.

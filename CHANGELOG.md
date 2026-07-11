@@ -48,7 +48,7 @@ conventional commit messages. The v0.1.0 entry below is hand-written.
   balance, no real AST). Treat validator-passing output as untrusted and
   render in a sandbox.
 - The validator rejects `eval(`, `new Function(`, `import` statements, and
-  `require(`. These checks are *defense in depth*, not a security
+  `require(`. These checks are _defense in depth_, not a security
   boundary.
 - Only `playground` is wired end-to-end. `poll`, `quiz`, `simulation`,
   `flashcards`, and `lab` are reserved names that ship in 0.1.1.
@@ -128,7 +128,7 @@ conventional commit messages. The v0.1.0 entry below is hand-written.
 - Five new prompt templates in `@playgenx/prompts`:
   `pollPrompt`, `quizPrompt`, `simulationPrompt`, `flashcardsPrompt`,
   `labPrompt`. Each is a pure function with the same `(request) =>
-  string` shape as the existing `playgroundPrompt`.
+string` shape as the existing `playgroundPrompt`.
 
 ### Changed
 
@@ -186,7 +186,7 @@ conventional commit messages. The v0.1.0 entry below is hand-written.
   body when `finish_reason === 'length'`. 12 new tests.
 - **Core pipeline** (`@playgenx/core`): `maxResponseBytes` option
   caps runaway responses with fence-aware truncation (preserves
-  ```` ```...``` ```` structure; the truncation marker is placed INSIDE
+  ` ```...``` ` structure; the truncation marker is placed INSIDE
   the fence so the parser keeps it). 3 new body parsers
   (`parsePollBody`, `parseQuizBody`, `parseFlashcardsBody`) return
   typed `ParseResult<T>` for the JSON-bodied kinds.
@@ -198,6 +198,6 @@ conventional commit messages. The v0.1.0 entry below is hand-written.
   `validateForKind` automatically so the new JSON shape checks apply
   to all 6 generateX functions without any caller changes.
 - The validator's checks are still lightweight (substring + tag balance
-  + tag names). A real AST-based validator remains on the 0.3.0 roadmap.
+  - tag names). A real AST-based validator remains on the 0.3.0 roadmap.
 
 [0.2.1]: https://github.com/xorinf/playgenx/releases/tag/v0.2.1

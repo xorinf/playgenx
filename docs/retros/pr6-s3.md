@@ -78,7 +78,7 @@ LocalAdapter contract; for production scale, add a custom
 **Open followups:**
 
 - The lockfile commit (`3d2c185`) is technically PR 6 post-
-  work. In future PRs, run `pnpm install` *before* committing
+  work. In future PRs, run `pnpm install` _before_ committing
   to make sure lockfile updates are caught.
 - A real AWS environment + integration test is the next
   extension; we'd want testcontainers-S3 or MinIO in CI.

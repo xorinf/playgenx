@@ -47,10 +47,8 @@ export class LocalAdapter implements ArtifactStorage {
   private readonly prefix: string;
   private readonly indexKey: string;
   private readonly maxEntries: number;
-  private readonly storage: Pick<
-    Storage,
-    'getItem' | 'setItem' | 'removeItem' | 'key' | 'length'
-  > | undefined;
+  private readonly storage:
+    Pick<Storage, 'getItem' | 'setItem' | 'removeItem' | 'key' | 'length'> | undefined;
 
   constructor(options: LocalAdapterOptions = {}) {
     this.prefix = options.keyPrefix ?? DEFAULT_PREFIX;
@@ -61,9 +59,10 @@ export class LocalAdapter implements ArtifactStorage {
 
   /** Returns the underlying storage, falling back to globalThis. */
   private get store(): NonNullable<LocalAdapter['storage']> {
-    const s = this.storage ?? (globalThis as { localStorage?: unknown }).localStorage as
-      | Pick<Storage, 'getItem' | 'setItem' | 'removeItem' | 'key' | 'length'>
-      | undefined;
+    const s =
+      this.storage ??
+      ((globalThis as { localStorage?: unknown }).localStorage as
+        Pick<Storage, 'getItem' | 'setItem' | 'removeItem' | 'key' | 'length'> | undefined);
     if (!s) {
       throw new Error('LocalAdapter: no localStorage available (browser-only)');
     }
@@ -163,11 +162,11 @@ export class LocalAdapter implements ArtifactStorage {
     const idx = this.readIndex();
     // `kind` and `providerId` filters are applied after each
     // entry is decoded; the index list itself just orders by date.
-    const ordered = (query.newestFirst ?? true)
-      ? [...idx].sort((a, b) => b.createdAt - a.createdAt)
-      : [...idx].sort((a, b) => a.createdAt - b.createdAt);
-    const limited =
-      typeof query.limit === 'number' ? ordered.slice(0, query.limit) : ordered;
+    const ordered =
+      (query.newestFirst ?? true)
+        ? [...idx].sort((a, b) => b.createdAt - a.createdAt)
+        : [...idx].sort((a, b) => a.createdAt - b.createdAt);
+    const limited = typeof query.limit === 'number' ? ordered.slice(0, query.limit) : ordered;
     const out: StoredArtifact[] = [];
     for (const ix of limited) {
       const r = await this.get(ix.id);
