@@ -6,6 +6,14 @@
  * @packageDocumentation
  */
 
+export type {
+  ArtifactStorage,
+  StoredArtifact,
+  SaveInput,
+  SaveResult,
+  ListQuery,
+} from './storage-types.js';
+
 /** Kinds of educational artifacts PlayGenX can produce. */
 export type ArtifactKind =
   | 'playground'

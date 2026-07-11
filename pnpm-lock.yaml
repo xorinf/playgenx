@@ -109,6 +109,15 @@ importers:
 
   packages/registry: {}
 
+  packages/storage:
+    dependencies:
+      '@playgenx/types':
+        specifier: workspace:*
+        version: link:../types
+      typescript:
+        specifier: ^5.6.0 || ^6.0.0
+        version: 6.0.3
+
   packages/types: {}
 
   packages/utils: {}

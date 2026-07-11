@@ -1,0 +1,76 @@
+{
+  "name": "@playgenx/storage",
+  "version": "0.1.0",
+  "description": "Pluggable persistence for PlayGenX artifacts. Mirrors the `Provider`-style convention used for LLM providers.",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./local": {
+      "types": "./dist/adapters/local.d.mts",
+      "import": "./dist/adapters/local.mjs"
+    },
+    "./http": {
+      "types": "./dist/adapters/http.d.mts",
+      "import": "./dist/adapters/http.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "lint": "eslint src",
+    "test": "vitest --run"
+  },
+  "tsdown": {
+    "entry": [
+      "src/index.ts",
+      "src/adapters/local.ts",
+      "src/adapters/http.ts"
+    ],
+    "format": [
+      "esm"
+    ],
+    "dts": true,
+    "sourcemap": true,
+    "clean": true,
+    "deps": {
+      "alwaysBundle": [
+        "^@playgenx/"
+      ]
+    }
+  },
+  "keywords": [
+    "playgenx",
+    "storage",
+    "persistence"
+  ],
+  "author": "xorinf <118471720+xorinf@users.noreply.github.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xorinf/playgenx.git",
+    "directory": "packages/storage"
+  },
+  "bugs": {
+    "url": "https://github.com/xorinf/playgenx/issues"
+  },
+  "homepage": "https://github.com/xorinf/playgenx/tree/main/packages/storage",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@playgenx/types": "workspace:*"
+  },
+  "peerDependencies": {
+    "typescript": "^5.6.0 || ^6.0.0"
+  },
+  "devDependencies": {
+    "@playgenx/types": "workspace:*"
+  }
+}
